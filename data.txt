@@ -1,15 +1,347 @@
+# OSC stands for Oracle Supply Chain 
+	Oracle offers a range of supply chain management (SCM) solutions that cater to various aspects of managing and optimizing supply chains for businesses. Here are some key uses of Oracle's SCM solutions:
+    - Inventory Management: Oracle SCM helps businesses manage their inventory efficiently by providing tools for demand forecasting, replenishment planning, and inventory optimization. This ensures that companies can maintain optimal inventory levels while minimizing carrying costs.
+    - Order Management: Oracle SCM allows businesses to streamline their order management processes, from order capture to fulfillment. It includes features such as order promising, scheduling, and tracking to ensure accurate and timely order delivery.
+    - Supplier Relationship Management: Oracle SCM facilitates better collaboration with suppliers through tools for supplier qualification, performance monitoring, and collaboration. This helps in building stronger supplier relationships and improving supply chain reliability.
+	Overall, Oracle SCM solutions are designed to help businesses optimize their supply chain processes, improve efficiency, reduce costs, and enhance customer satisfaction through better inventory management, streamlined operations, and strategic insights.
+
+OSC (Oracle Supply Chain) is integrated with PARIS 2.0 APIs.
+#-#-#
+
+# PARIS stands for Planning And Reporting Infrastructure for Ships
+It is a software system built by Fleet Management and is used from the office side (on shore) for monitoring all the ships managed by FLEET.
+It provides following features:
+- 24/7 monitoring: Track your ship anywhere, 24/7.
+- Real time data: Get data on crew lists, cargo details, ships’ performances and many more.
+
+There are two versions. PARIS 1.0 is a legacy software and the upgraded PARIS 2.0 is an improved version with new features like inventory management, crew recommendation, improved PMS etc.
+
+PARIS 2 uses postgres database and PARIS 1 uses Oracle database.
+
+PARIS 2 directly accesses PARIS 1 database for synchronization through aws lambda functions.
+#-#-#
+
+# Mini-server
+Mini-server is a trimmed down version of PARIS 1.0 built for use on the ship (off shore).
+It provides almost all the features of PARIS 1.0.
+
+Mini-server synchronizes data with PARIS 1.0 using sync rules. 
+
+The data from PARIS 1 is received in the form of email with XML file attachment which is required to be imported on mini-server through UI.
+
+The data from mini-server is sent to PARIS 1 either via email or through MQ.
+
+Mini-server uses either MySQL or MariaDB as database.
+#-#-#
+
+
+# Inventory Management Project
+Ship inventory management is a strategic approach aimed at guaranteeing that vessels are adequately equipped with the right items, in the correct quantities, precisely when needed. The primary objectives are to minimize costs, optimize operational efficiency, and adhere to safety and compliance standards.
+
+## Scope of Inventory Management:
+    - Spare Parts: Ensuring a ready supply of spares for machinery.
+    - Tools and Equipment: Managing tools essential for routine maintenance, repairs, and emergencies.
+    - Fuel and Lubricants: Maintaining adequate reserves for propulsion and machinery systems.
+    - Safety Equipment: Oversight of safety gear, Fire Fighting Appliances (FFA), and Life-Saving Appliances (LSA).
+    - Paint, Mooring Ropes, IMPA: Managing miscellaneous items essential for vessel maintenance.
+    - Medical Supplies: Ensuring a sufficient inventory of medical provisions for crew health.
+
+## Critical Aspects of Inventory Management:
+    - Categorization of Inventory: Identify and classify items based on their nature, usage, and criticality.
+    - Establishment of Stock Levels: Set optimal minimum and maximum stock levels to prevent shortages and overstocking.
+    - Inventory Tracking: Offer a robust system to track stock levels and usage. Regularly update the system with data on received, issued, and consumed items.
+    - Regular Audits: Conduct periodic physical audits to ensure alignment between recorded and actual stock.
+    - Re-order Process: Implement proactive reordering by establishing points triggering procurement when stock diminishes.
+    - Procurement Integration: Integrate seamlessly with procurement processes, facilitating timely update to office side (Procurement team).
+    - Consumption Tracking: Implement a user-friendly interface for tracking and analyzing consumption patterns.
+#-#-#
+
+## Understand Overlapping of Inventory Management and PMS
+
+Ship inventory management and Planned Maintenance System (PMS) are two critical aspects of maritime operations that overlap in various ways. Both play crucial roles in ensuring the safety, reliability, and efficiency of a vessel.
+    - Spare Parts Management:
+        Ship inventory management includes maintaining an inventory of spare parts. PMS helps identify and schedule routine maintenance tasks for the machinery and equipment, ensuring that the necessary spare parts are available when needed.
+    - Scheduled Maintenance and Inspections:
+        PMS involves planning and scheduling routine maintenance tasks based on manufacturers' recommendations and regulatory requirements. Ship inventory management ensures that the required tools, consumables, and spare parts are in stock for these scheduled maintenance activities.
+    - Documentation and Record-Keeping:
+        Both ship inventory management and PMS rely on accurate documentation and record-keeping. Information related to spare parts, maintenance activities, and equipment history is essential for both systems to function effectively.
+    - Procurement and Replenishment:
+        Ship inventory management involves procurement activities to replenish consumables, spare parts, and other inventory items. PMS may trigger procurement based on scheduled maintenance tasks, ensuring that necessary supplies are available before maintenance activities commence.
+    - Regulatory Compliance:
+        Ship inventory management and PMS both contribute to regulatory compliance. Inventory management ensures that required spare parts and supplies are on hand, while PMS ensures that maintenance tasks are conducted in accordance with regulatory requirements.
+
+#-#-#
+
+# Inventory Management System Trial Project requirements
+Key Objectives of the Inventory Management System Implementation:
+    - Accurate Inventory Recording: 
+        Implement a robust system to accurately record and catalog spare parts within the inventory. 
+    - Real-time Tracking: 
+        Facilitate real-time tracking of spare parts to provide up-to-date information on their availability and usage.
+    - Maintaining ROB: 
+        Ensure the IMS maintains an accurate and current representation of spare parts ROB present onboard each vessel. 
+
+#-#-#
+
+Inventory Management System Phase 1: Scope of Work/Business Requirements
+1. System Capacity Expansion: 
+
+    Currently capable of handling 600 spare parts. 
+
+    Future Requirement: Enhance the system's capacity to efficiently manage up to 15,000 spare parts for a vessel. 
+
+2. Build Equipment Master: 
+
+    Develop an Equipment Master to comprehensively list all equipment present onboard each vessel. 
+
+    Include essential details such as equipment specifications (make, model and serial number) 
+
+3. Build Spares Master: 
+
+    Establish a Spares Master to serve as a centralized catalog for all spare parts. 
+
+    Include comprehensive information for each spare part, such as part number, drawing and position number. 
+
+4. Screen Changes:
+
+MiniServer Changes:
+
+    Requisition Screen: Auto population of equipment details while creating requisition (vessel) 
+
+    Inventory List: Vessel specific spares under this tab. 
+
+    PMS Task Screen (vessel side): Provision to show spares associated with equipment and consumption.
+
+PARIS 2.0
+
+    Spares Screen: Detailed information on a vessel's specific spare parts inventory.
+
+5. Integration: 
+
+    Ensure seamless integration with other relevant systems, such as procurement systems and planned maintenance systems.
+
+#-#-#
+
+Inventory Management System Phase 1: Out of Scope 
+
+    Excluding machinery spare parts, all other items such as lubricating oil, paints, and consumables will not be included in our trial release. These items are slated for coverage in subsequent phases.
+
+    Master Equipment and Master Spares library UI display in PARIS 2.0. (Phase 2)
+
+    Vessel spares inventory will not be editable through Excel and UI. (Phase 2)
+
+    Show spares consumption (history) for PMS task on miniserver and Paris 1 Office side. (Phase 2)
+
+#-#-#
+Valad Infotech Ltd is vendor for extracting vessel equipment data. They have meticulously crafted six Excel sheets, strategically designed to delineate master-level and vessel-level equipment and spares details.
+
+    - M0-Master Manufacturers:
+        Catalogs unique manufacturers with associated "MANUFACTURER ID."
+        Data input at the master level.
+
+         
+    - M1-Master Equipment Library:
+        Compiles a repository of unique equipment, intricately linked with makers/models and assigned a distinctive "CompTypeNo."
+        Data input at the master level.
+
+         
+    - M2-Master Spares Library:
+        Encompasses spares data linked to the Master Equipment Library through unique "CompTypeNo" & "PartTypeID."
+        Data input at the master level.
+
+         
+    - M3-Master_Vessel EQ Link:
+        Serves as the crucial link connecting the Master Equipment Library to vessel-specific Equipment lists via "CompTypeNo" & "SFI CODE."
+        Data input and maintenance at the master level.
+
+         
+    - V1-Silver Amanda EQ List:
+        Contains a comprehensive list of equipment on the Silver Amanda, incorporating details like Manufacturer, Model, Serial Number, SFI Code, and CompTypeNo.
+        Data input at the vessel level.
+
+         
+    - V2-Silver Amanda Vessel Spares:
+        Enlists spare parts data pertinent to the Silver Amanda's equipment, linked through "SFI CODE."
+        Data input at the vessel level.
+
+#-#-#
+Component - Everything on a ship is marked with an SFI code and is called as component. A component can have child components (often referred to as subcomponents) and a special type of component that has maker and model is called an equipment. E.g. a ship hull is a simple component, a ship engine is component that is an equipment. This engine will have pistons, crank shaft which are again components inside an engine. 
+
+Equipment - Equipment is any machinery that has a maker and a model. E.g. a V8 engine BMW-N63B40A is an equipment which has maker BMW and model N63B40A.
+
+Spares - A consumable part of an equipment is called as spare. E.g. nuts, bolts, gaskets etc. 
+#-#-#
+
+## Inventory management excel data import
+As a part of inventory management project, the data of vessel equipment and the spare parts associated with them will be obtained for 215 vessels. This data is extracted from ship manuals by Valad Infotech and is split into 6 files as follows,
+
+There are 6 files provided by Valad as follows,
+    - M0 - Master Manufacturers.xlsx: this file contains all unique manufacturers that are associated with ships managed by Fleet.
+    - M1A-Master Equipment Library.xlsx: this file contains list of unique equipment defined by a combination of manufacturer and model of an equipment.
+    - M1B-Master Child Equipment.xlsx: this file holds the details of subcomponents of master equipment. (This sheet will not be imported as it was introduced by Valad for their ease of mapping.)
+    - M2-Master Spares Library.xlsx: this is a list of unique spare parts obtained for master list of equipment i.e. M1A.
+    - V1- <Vessel name> EQ List.xlsx: vessel specific equipment list.
+    - V2- <Vessel name> Vessel Spares.xlsx: vessel specific spares list.
+
+ 
+
+    - The data extraction will be done for one vessel at a time. As a result, the master sets M0, M1A and M1B would have new records appended for each new vessel level data. 
+    - The master set M2 was expected to grow to millions of records, and hence, would be split into multiple parts. 
+    - The files V1 and V2 would be obtained for each vessel and be vessel specific. 
+    - Vessel spares V2 sheet would be a subset of master spares list M2.
+#-#-#
+## New Item Code format for spare parts
+    - An item code is a unique identifier used by OSC to track requisitions and reserves on board for spare parts.
+    - Earlier, the item code format was defined as "vessel_id"."sfi_code"."drawing_no+item_no+part_no" with the max length of 40 characters. 
+    - On a ship, an equipment like pump or a motor of same maker and model i.e. an exactly identical equipment/machine can be used at multiple locations on a ship. Which makes their SFI code to be different. 
+    - This made the item codes for exactly identical spare parts i.e. the parts of same maker+model equipment used at multiple places on ship to differ because of different SFI codes.
+    - This raised a concern as the spare parts on a ship may be stored in same rack/box and such identical spare parts could be used interchangeably during a job.  
+    - Having different item codes meant that the ROB will be maintained separately. 
+    - To avoid this, a unique ID called part_type_id is given to each spare part in spares master table and a new format for item code is defined to track a single ROB count - "vessel_id"."part_type_id"."drawing_no+item_no+part_no"
+    - Here, three sections separated by a period “.” are kept as is, since, this was a requirement from OSC.
+#-#-#
+## Inventory Management Service
+
+A new inventory-management service is introduced as a part of Release #1 of this trial project.
+
+Bitbucket repository - paris2-api-inventory-management
+1.1 New Client APIs
+    - UploadCompleted: After uploading the input zip to S3, the client-side JS notifies the server using this function that the upload has completed.
+    - VesselSparesList: For OSC to pull the new spares data.
+
+1.2 New Background Lambdas
+    - ImportSparesData: Processes the uploaded spares file from S3, applies validation checks and saves / merges the new records into item-master (for master spares data) and vessel DB tables (for vessel specific spares data).
+    - SyncSparesToParis1: To sync the imported spares records into PARIS 1.0.
+
+1.3 Databases Used
+    - PARIS 2.0 DBs: item-master, vessel
+    - PARIS 1.0 DB: PARIS 
+    - Mini-server DB: MySQL/MariaDB embedded database
+#-#-#
+Table sheet mapping:
+    - Valad M0 sheet -> manufacturer_master
+    - Valad M1A sheet -> equipment_master  
+    - Valad M2 sheet -> spares_master
+    - Valad V1 sheet -> vessel_components
+    - Valad V2 sheet -> vessel_spareparts
+#-#-#
+
+# Paris 2.0 SFI master revamp
+
+## SFI Master Screen in item_master UI (NEW)
+	Allow users to view and update SFI master codes from Paris 2.0 UI
+		Read = List SFI master codes and description for the users to view
+		Create/Update = Allow users to add a new or edit an existing SFI code value and description in-place from the UI
+			Delete not supported as existing components will be linked to it
+		Create/Update = Users can also bulk upload SFI code changes in excel format from UI as convenience (old SFI code, new SFI code, new description)
+
+### Database item_master 
+	Table master_sfi_codes (NEW)
+		id identity
+		description varchar(2000)
+		sfi_code varchar(20)
+		created_at timestamp
+		updated_at timestamp
+		deleted_at timestamp
+	
+	- One time seed script for initial SFI master data population in master_sfi_codes (List can be verified and provided by Ajinkya).
+
+### Database vessel
+	Table vessel_components (CHANGED)
+		sfi_code varchar (REMOVED)
+		sfi_code_id number (NEW) (references master_sfi_codes 'id')
+		paris1_ref_id number (NEW)
+
+## Lambdas - Inventory Management API
+	- Lambda importSparesData (CHANGED)
+		- When upserting to vessel_components table in Paris 2.0, use master_sfi_codes's 'id' instead of storing the sfi_code text directly.
+		- Fail validation for import if sfi_code doesn't exist in master_sfi_codes.
+	
+	- Lambda syncSparesToParis1 (CHANGED)
+		- When inserting to Paris 1.0, backfill the Paris 1.0 FML_VESSEL_COMPONENTS table's ‘ID’ as paris1_ref_id in Paris 2.0. (Due to SFI code updates in Paris 2.0 we won't be able to join with Paris 1.0's FML_VESSEL_COMPONENT table based on the SFI_CODE anymore during sync).
+		- When updating any existing Paris 1.0 records, use the paris1_ref_id column stored in Paris 2.0 to join and update its SFI_CODE_ID in Paris 1.0.
+	
+	- Lambda syncSfiMasterCodesToParis1 (NEW)
+		- It will sync SFI master records from Paris 2 to Paris 1.0's FML_MASTER_SFI_CODES.
+		- Paris 1.0's FML_SFI_MASTER_CODES's 'ID' should be exactly same as Paris 2.0's master_sfi_code's ‘id’
+		- When inserting new records to Paris 1.0's FML_SFI_MASTER_CODES, it will use the Paris 2.0's master_sfi_codes's ‘id’ and use this ID references between Paris 2.0 and Paris 1.0 to also update the SFI_CODE value and DESCRIPTION in Paris 1.0.
+	
+	- Lambda syncNewSfiMasterCodesFromParis1 (NEW)
+		- Daily sync job that will sync any new SFI master codes from Paris 1.0's FML_MASTER_SFI_CODES to Paris 2.0's master_sfi_codes.
+		- This is a temporary job which only caters to new SFI code additions in Paris 1.0 and doesn't do any updates. We will remove this job once we have fully transitioned SFI code management to Paris 2.0 interface, rendering Paris 1.0 as read-only.
+
+#-#-#
+# Paris 1.0 SFI master changes
+## Database PARIS 
+	Table FML_MASTER_SFI_CODES (NEW)
+		id identity (value same as Paris 2.0's master_sfi_codes 'id')
+		description varchar(2000)
+		sfi_code varchar(20)
+		created_at timestamp
+		updated_at timestamp
+		deleted_at timestamp
+	
+	Table FML_VESSEL_COMPONENTS (CHANGED)
+		SFI_CODE varchar (REMOVED)
+		SFI_CODE_ID number (NEW) (references FML_MASTER_SFI_CODES 'ID')
+
+## Sync Rules
+	- For syncing the SFI code changes from Paris 1.0 to mini-server, add a sync rule to synchronize our new Paris 1.0 inventory tables - FML_VESSEL_COMPONENTS, FML_VESSEL_SPAREPARTS, FML_COMPONENT_SPAREPART_MAPPING and FML_MASTER_SFI_CODES to mini-server (This task will be taken up by the Paris 1.0 team).
+
+#-#-#
+## Mini-Server
+
+## Database FML
+	Restructure the new mini-server tables for inventory management to align with Paris 1.0 tables
+		This ensures a 1:1 mapping between the Paris 1.0 and mini-server tables and is considered to be a best practice for mini-server sync rules as it allows leveraging generic sync rules without needing to write custom rules from scratch.
+		Given our new spares data from Valad, establishing a direct link like the existing FML_SPARE_ITEMS and FMLATTRIBUTECODES using a single version of SFI code becomes impractical, as we can now have many-to-many relations between components and spares. In future, as we progress with the PMS module, we'll explore the possibility of linking to our own singular SFI master table of Paris 2.0 (master_sfi_codes) to reduce the dependency on Paris 1.0.
+	
+	Table FML_MASTER_SFI_CODES (NEW)
+		id identity (same as Paris 2.0's master_sfi_codes)
+		description varchar(2000)
+		sfi_code varchar(20)
+		created_at timestamp
+		updated_at timestamp
+		deleted_at timestamp
+	
+	Table FML_VESSEL_COMPONENTS (CHANGED)
+		SFI_CODE varchar (REMOVED)
+		SFI_CODE_ID number (NEW) (references FML_MASTER_SFI_CODES 'ID')
+
+## Code changes - FML-Miniserver 
+	Rewrite SQL queries in the mini-server web app to accommodate the updated table structures.
+
+#-#-#
+How will the changes to SFI master codes in Paris 2.0 get propagated to miniserver for all vessels?
+ 
+Before SFI Code Changes:
+	- All changes to existing SFI codes should be stopped in Paris 1.0
+	- SFI Master is synced to Paris1 using sync job and Mini-server using sync rules (making this change now would vastly simplify the changes in SFI codes later on, otherwise once we move to production without Paris 2.0's SFI master complex migrations would be required to remap spares to point to the Paris 2.0's SFI master)
+	- Remove dependency on Paris 1.0 for FMLATTRIBUTECODES for spares data (so it is crucial to stop all updates to Paris 1.0's SFI so that Paris 2.0 and Paris 1.0 SFI code masters are in sync in the mini-server for mapped tasks - any changes to component's SFI codes should only be considered through Paris 2.0 now)
+	- To cater to addition of new SFI codes (using the old SFI format) in Paris 1.0, we would have this temporary sync job syncNewSfiMasterCodesFromParis1 to daily sync any new SFI codes from Paris 1.0 to Paris 2.0. 
+
+After SFI Code Changes (To be performed only after the new PMS module has been deployed to production):
+	- Users will make changes to SFI codes through Paris 2.0.
+	- The Paris 2.0 → Paris 1.0 sync job syncSfiMasterCodesToParis1 would take care of syncing the Paris 2.0 SFI master changes to Paris 1.0 (because FML_VESSEL_COMPONENTS refer to new SFI Master through ID and not value, so FML_VESSEL_COMPONENTS wont have any additional changes to it and does not need syncing from Paris 2.0 to Paris 1.0 or miniserver)
+	- PMS tasks are also linked with this same SFI master (single point of sfi code (no duplicates) and both vessel_components and new pms_tasks would be linked with this same SFI_Master_codes table) - so no additional change needed for new PMS tasks after we have moved the new PMS module from Paris 2.0 to production to change the SFI codes.
+	- If we change the SFI codes before PMS, there will be inconsistencies in the SFI linkages of tasks and spares as each will refer to separate sfi master tables - otherwise we would need to make change to both FMLATTRIBUTECODES and sfi_master_codes together (which is prone to error and strongly discouraged).
+	- We can remove the temporary sync job syncNewSfiMasterCodesFromParis1 and make Paris 1.0 read-only for SFI code management.
+
+#-#-#
 # Inventory Management - Requisition Screen Changes Technical Design
 
 ## Why requisition screen on mini-server is getting revamped?
 The booking codes for spares will be revamped for which the UI on mini-server will also be updated to accommodate these changes.
 
+#-#-#
 ## What are the features of new mini-server requisition screen?
 1. To allow user to add/edit/delete draft requisitions.
 2. To allow user to add/edit/delete vessel components as booking code categories and subcategories for spares requisition.
 3. To allow user to add/edit/delete spare parts for each subcategory separately.
 4. To auto-populate maker, model, serial number for selected category/subcategory.
 
-## High level design for creating spares requisition on mini-server using new module
+#-#-#
+## Steps to create spares requisition on mini-server using new requisitions module:
 1. Select reason for requisition and department.
 2. Select booking code "Machinery Spares" under "Spares" product group.
 3. Select "Category" from dropdown which has a list of top level SFI code components.
@@ -34,25 +366,18 @@ The booking codes for spares will be revamped for which the UI on mini-server wi
 -PARIS 2.0 has postgres database, PARIS 1.0 has oracle database and mini-server has either mariadb or mysql database.
 
 ### Paris 2.0 database changes:
-
 	-A new column "inv_flag" will be added to "vessel" table to identify inventory management enabled vessels.
 	-This flag is required to distinguish booking codes received from OSC. For example, "Main Engine" is a booking code as well as Subcategory.
 	-For inventory enabled vessels (inv_flag = true), when requisitions are synced from PARIS 2 to PARIS 1, all the new requisitions for Spares product group will be synced with booking code of "Machinery Spares" in fmlrequisition table of PARIS 1. 
 
-
-
   -
-	
 		-Database name: VESSEL
 		-Table name: VESSEL 
 		-Type: Exiting table
 		-
 			New columns: 
-			
 				-inv_flag - boolean
 			
-		
-	
  #-#-# 
 
 
@@ -72,10 +397,6 @@ The booking codes for spares will be revamped for which the UI on mini-server wi
 				-ITEM_NUMBER - varchar(30)
 				-PART_NAME - varchar(240)
 			
-		
-	
-#-#-#  
-  
   -
 	
 		-Database name: PARIS
@@ -90,41 +411,26 @@ The booking codes for spares will be revamped for which the UI on mini-server wi
 				-CREATED_AT - date
 				-UPDATED_AT - date
 			
-		
-	
-  
-
-
-
-	- New master booking code "Machinery Spares" will be added in fmlattributecodes table for "Spares" category.
+	- New master booking code "Machinery Spares" will be added in "fmlattributecodes" table for "Spares" category.
 	
 #-#-#
 ### Mini-server database changes:
-
 	-Restructure the new mini-server tables for requisition to allow user to order parts based on component categories. This allows user to add/edit/remove vessel components as categories and subcategories.
 	-The records in draft tables would be temporary and be hard deleted once the requisition is submitted.
 	-On submission of requision draft, new records will be created in fmlrequisition and fmlrequisitionpart table.
 	-Multiple requisitions would be created in case selected subcategories have different maker or model.
-
-
-#-#-#
-  -
 	
-		-Database name: FML
-		-Table name: FMLREQUISITIONPARTS 
-		-Type: Exiting table
-		-
-			New columns: 
-			
-				-SUBCATEGORY_ID - integer
-				-DRAWING_NAME - varchar(150)
-				-DRAWING_NUMBER - varchar(150)
-				-ITEM_NUMBER - varchar(30)
-				-PART_NAME - varchar(240)
-			
+	-Database name: FML
+	-Table name: FMLREQUISITIONPARTS 
+	-Type: Exiting table
+	-
+		New columns: 
 		
-	
-  #-#-#
+			-SUBCATEGORY_ID - integer
+			-DRAWING_NAME - varchar(150)
+			-DRAWING_NUMBER - varchar(150)
+			-ITEM_NUMBER - varchar(30)
+			-PART_NAME - varchar(240)
   
   -
 	
@@ -191,33 +497,20 @@ The booking codes for spares will be revamped for which the UI on mini-server wi
 
 ## Source Code Changes
 ### PARIS 2.0
-
 	-Update requisitions PARIS 1.0 to PARIS 2.0 sync new "fmlrequisitionpart" columns from PARIS 1 which hold "master_sfi_codes" table id as subcategory id for inventory enabled vessels.
 	-Update requisition query API to send category and subcategory data to OSC.
-#-#-#
 
 ### PARIS 1
-
 	-New sync rule will be created for "fmlrequisitionparts" and "fml_inventory_booking_codes" table specifically for inventory enabled vessels.
 
- #-#-#
 
 ### Mini-Server
-
 	-Update requisitions JSP to use new design for spares inventory.
 	-Update requisitions controller to insert new fields along with new booking code.
-#-#-#
 
 ### OSC
-
 	-OSC will be updating its UI for category and subcategory change.
-
 #-#-#
-
-## Requisition Changes Propagation Flow: 
-### For Inventory Enabled Vessels
-
-
 
 
 # Mini-Server to OSC: Inventory & Requisitions Synchronization - Design & Debugging
@@ -231,216 +524,179 @@ The booking codes for spares will be revamped for which the UI on mini-server wi
 ## Inventory Data Model
 
 ### Mini-server data model
-
-
-  -
-	
-		-Database name: FML
-		-Table name: fmlosc_inv_balance_update 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, auto-incremented)
-			  -inv_id - integer (not null)
-			  -update_osc_quantity - integer (not null)
-			  -update_date - date (not null)
-			  -remarks - varchar(100)
-			  -type - varchar(1)
-			  -inventory_opt_type - integer (not null)
-			  -operatorid - integer (not null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
+	-Database name: FML
+	-Table name: fmlosc_inv_balance_update 
+	-Columns: 
+		-id - integer (primary key, auto-incremented)
+		-inv_id - integer (not null)
+		-update_osc_quantity - integer (not null)
+		-update_date - date (not null)
+		-remarks - varchar(100)
+		-type - varchar(1)
+		-inventory_opt_type - integer (not null)
+		-operatorid - integer (not null)
+		-lastmodified - timestamp (not null, default current_timestamp)
 	#-#-#
 		-Database name: FML
 		-Table name: fmlosc_inventory_balance 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, not null)
-			  -shipid - integer (not null)
-			  -item_code - varchar(40) (not null)
-			  -is_spare - integer (not null)
-			  -on_hand_quantity - integer (not null)
-			  -operatorid - integer (not null)
-			  -unit_of_measure - integer (default null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
-			
+		-Columns: 
+			-id - integer (primary key, not null)
+			-shipid - integer (not null)
+			-item_code - varchar(40) (not null)
+			-is_spare - integer (not null)
+			-on_hand_quantity - integer (not null)
+			-operatorid - integer (not null)
+			-unit_of_measure - integer (default null)
+			-lastmodified - timestamp (not null, default current_timestamp)
+		
 	#-#-#
 		-Database name: FML
 		-Table name: fmloilconsumption 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, auto-incremented)
-			  -shipid - integer (not null)
-			  -oiltype - varchar(100) (not null)
-			  -oilgrade - varchar(300) (not null)
-			  -oilconsumtion - varchar(100) (not null)
-			  -reportId - varchar(100) (not null)
-			  -type - varchar(2) (not null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
-			  -is_exported - integer (not null, default '0')
+		- Columns: 
+			-id - integer (primary key, auto-incremented)
+			-shipid - integer (not null)
+			-oiltype - varchar(100) (not null)
+			-oilgrade - varchar(300) (not null)
+			-oilconsumtion - varchar(100) (not null)
+			-reportId - varchar(100) (not null)
+			-type - varchar(2) (not null)
+			-lastmodified - timestamp (not null, default current_timestamp)
+			-is_exported - integer (not null, default '0')
 			
 	#-#-#
 		-Database name: FML
 		-Table name: fmloilconsumptiondetails 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, auto-incremented)
-			  -oiltype - varchar(100) (not null)
-			  -oilgrade - varchar(100) (not null)
-			  -grade_description - varchar(100) (not null)
-			  -item_code - varchar(100) (not null, unique)
-			  -is_active - integer (not null, default '1')
-			  -operatorid - integer (not null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
+		- Columns: 
+			-id - integer (primary key, auto-incremented)
+			-oiltype - varchar(100) (not null)
+			-oilgrade - varchar(100) (not null)
+			-grade_description - varchar(100) (not null)
+			-item_code - varchar(100) (not null, unique)
+			-is_active - integer (not null, default '1')
+			-operatorid - integer (not null)
+			-lastmodified - timestamp (not null, default current_timestamp)
 			
 	#-#-#
 		-Database name: FML
 		-Table name: fml_vessel_spareparts 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, auto-incremented)
-			  -ref_inv_id - integer (default null)
-			  -item_code - varchar(40) (default null)
-			  -drawingname - varchar(150) (default null)
-			  -drawingno - varchar(150) (default null)
-			  -itemno - varchar(30) (default null)
-			  -partno - varchar(150) (default null)
-			  -description - varchar(240) (default null)
-			  -part_type_id - char(12) (default null)
-			  -is_critical - char(1) (default null)
-			  -minimum_rob - integer (default null)
-			  -recommended_rob - integer (default null)
-			  -manufacturer_name - varchar(100) (default null)
-			  -manufacturer_code - char(6) (default null)
-			  -bookingcode - integer (default null)
-			  -created_at - timestamp (default current_timestamp)
-			  -updated_at - timestamp (default current_timestamp)
-			  -deleted_at - timestamp (default null)
-			  -shipid - integer (default null)
-			  -uom - char(3) (default null)
-			
-			
-	
-  
+		- Columns: 
+			-id - integer (primary key, auto-incremented)
+			-ref_inv_id - integer (default null)
+			-item_code - varchar(40) (default null)
+			-drawingname - varchar(150) (default null)
+			-drawingno - varchar(150) (default null)
+			-itemno - varchar(30) (default null)
+			-partno - varchar(150) (default null)
+			-description - varchar(240) (default null)
+			-part_type_id - char(12) (default null)
+			-is_critical - char(1) (default null)
+			-minimum_rob - integer (default null)
+			-recommended_rob - integer (default null)
+			-manufacturer_name - varchar(100) (default null)
+			-manufacturer_code - char(6) (default null)
+			-bookingcode - integer (default null)
+			-created_at - timestamp (default current_timestamp)
+			-updated_at - timestamp (default current_timestamp)
+			-deleted_at - timestamp (default null)
+			-shipid - integer (default null)
+			-uom - char(3) (default null)
 #-#-#
-
-
 ### PARIS 1.0 data model
-
-  -
-	
-		-Database name: PARIS
-		-Table name: fmlosc_inv_balance_update 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, auto-incremented)
-			  -inv_id - integer (not null)
-			  -update_osc_quantity - integer (not null)
-			  -update_date - date (not null)
-			  -remarks - varchar(100)
-			  -type - varchar(1)
-			  -inventory_opt_type - integer (not null)
-			  -operatorid - integer (not null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
-			#-#-#
-	
-		-Database name: FML
-		-Table name: fmlosc_inventory_balance 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, not null)
-			  -shipid - integer (not null)
-			  -item_code - varchar(40) (not null)
-			  -is_spare - integer (not null)
-			  -on_hand_quantity - integer (not null)
-			  -operatorid - integer (not null)
-			  -unit_of_measure - integer (default null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
+	-Database name: PARIS
+	-Table name: fmlosc_inv_balance_update 
+	- Columns: 
+			-id - integer (primary key, auto-incremented)
+			-inv_id - integer (not null)
+			-update_osc_quantity - integer (not null)
+			-update_date - date (not null)
+			-remarks - varchar(100)
+			-type - varchar(1)
+			-inventory_opt_type - integer (not null)
+			-operatorid - integer (not null)
+			-lastmodified - timestamp (not null, default current_timestamp)
 		#-#-#
 	
-		-Database name: FML
-		-Table name: fmloilconsumption 
-		-
-			Columns: 
-			
-			  -id - integer (primary key, auto-incremented)
-			  -shipid - integer (not null)
-			  -oiltype - varchar(100) (not null)
-			  -oilgrade - varchar(300) (not null)
-			  -oilconsumtion - varchar(100) (not null)
-			  -reportId - varchar(100) (not null)
-			  -type - varchar(2) (not null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
-			  -is_exported - integer (not null, default '0')
+	-Database name: FML
+	-Table name: fmlosc_inventory_balance 
+	-
+		Columns: 
 		
+			-id - integer (primary key, not null)
+			-shipid - integer (not null)
+			-item_code - varchar(40) (not null)
+			-is_spare - integer (not null)
+			-on_hand_quantity - integer (not null)
+			-operatorid - integer (not null)
+			-unit_of_measure - integer (default null)
+			-lastmodified - timestamp (not null, default current_timestamp)
 	#-#-#
-		-Database name: FML
-		-Table name: fmloilconsumptiondetails 
-		-
-			Columns: 
-			  -id - integer (primary key, auto-incremented)
-			  -oiltype - varchar(100) (not null)
-			  -oilgrade - varchar(100) (not null)
-			  -grade_description - varchar(100) (not null)
-			  -item_code - varchar(100) (not null, unique)
-			  -is_active - integer (not null, default '1')
-			  -operatorid - integer (not null)
-			  -lastmodified - timestamp (not null, default current_timestamp)
-			
+	-Database name: FML
+	-Table name: fmloilconsumption 
+	-
+		Columns: 
+		
+			-id - integer (primary key, auto-incremented)
+			-shipid - integer (not null)
+			-oiltype - varchar(100) (not null)
+			-oilgrade - varchar(300) (not null)
+			-oilconsumtion - varchar(100) (not null)
+			-reportId - varchar(100) (not null)
+			-type - varchar(2) (not null)
+			-lastmodified - timestamp (not null, default current_timestamp)
+			-is_exported - integer (not null, default '0')
+#-#-#
+	-Database name: FML
+	-Table name: fmloilconsumptiondetails 
+	-
+		Columns: 
+			-id - integer (primary key, auto-incremented)
+			-oiltype - varchar(100) (not null)
+			-oilgrade - varchar(100) (not null)
+			-grade_description - varchar(100) (not null)
+			-item_code - varchar(100) (not null, unique)
+			-is_active - integer (not null, default '1')
+			-operatorid - integer (not null)
+			-lastmodified - timestamp (not null, default current_timestamp)
   #-#-#
 
-
-
 ### PARIS 2.0 data model
-
-  -
+-Database name: VESSEL
+-Table name: inventory_update
+-
+	Columns: 
+		-id - serial4 (primary key, not null)
+		-vessel_id - int4 (null)
+		-item_code - varchar(40) (not null)
+		-product_group - varchar(150) (null)
+		-subgroup - varchar(150) (null)
+		-quantity_change - int4 (not null)
+		-quantity_change_date - date (null)
+		-unit_of_measure - varchar(30) (null)
+		-sent_to_osc - bool (null, default false)
+		-created_at - timestamptz (not null, default current_timestamp)
+		-updated_at - timestamptz (not null, default current_timestamp)
+		-status - varchar(20) (null)
+		-updated_by - varchar(255) (null)
+		-transaction_type - varchar(20) (not null)
+		-remarks - varchar(240) (null)
+		-updated_by_hash - varchar(255) (null)
 	
-		-Database name: VESSEL
-		-Table name: inventory_update
-		-
-			Columns: 
-			  -id - serial4 (primary key, not null)
-			  -vessel_id - int4 (null)
-			  -item_code - varchar(40) (not null)
-			  -product_group - varchar(150) (null)
-			  -subgroup - varchar(150) (null)
-			  -quantity_change - int4 (not null)
-			  -quantity_change_date - date (null)
-			  -unit_of_measure - varchar(30) (null)
-			  -sent_to_osc - bool (null, default false)
-			  -created_at - timestamptz (not null, default current_timestamp)
-			  -updated_at - timestamptz (not null, default current_timestamp)
-			  -status - varchar(20) (null)
-			  -updated_by - varchar(255) (null)
-			  -transaction_type - varchar(20) (not null)
-			  -remarks - varchar(240) (null)
-			  -updated_by_hash - varchar(255) (null)
-			
 	#-#-#
 		-Database name: VESSEL
 		-Table name: osc_inventory_balance
-		-
-			Columns: 
-			
-			  -id - serial4 (primary key, not null)
-			  -vessel_id - int4 (not null)
-			  -exchange_id - varchar(255) (null)
-			  -exchange_date - timestamptz (null)
-			  -item_code - varchar(40) (not null)
-			  -category - varchar(255) (null)
-			  -on_hand_quantity - int4 (not null)
-			  -unit_of_measure - varchar(30) (null)
-			  -osc_updated_at - timestamptz (not null)
-			  -created_at - timestamptz (not null, default current_timestamp)
-			  -updated_at - timestamptz (not null, default current_timestamp)
-			
-			#-#-#
-	
+		- Columns: 
+			-id - serial4 (primary key, not null)
+			-vessel_id - int4 (not null)
+			-exchange_id - varchar(255) (null)
+			-exchange_date - timestamptz (null)
+			-item_code - varchar(40) (not null)
+			-category - varchar(255) (null)
+			-on_hand_quantity - int4 (not null)
+			-unit_of_measure - varchar(30) (null)
+			-osc_updated_at - timestamptz (not null)
+			-created_at - timestamptz (not null, default current_timestamp)
+			-updated_at - timestamptz (not null, default current_timestamp)
+#-#-#
 		-Database name: VESSEL
 		-Table name: lub_oil_inventory_update
 		-
@@ -573,7 +829,7 @@ Trigger: HTTP - GET
 PARIS 2 Table: inventory_update
 
 #-#-#
-Description: Post updated ROB to PARIS 2.
+Description: Post updated ROB (Reserves On Board) to PARIS 2.
 Lambda: postOscInventoryBalance	
 Endpoint: /inventory/osc-inventory-balance/{vessel_id}
 Retry logic: OSC implemented
@@ -581,7 +837,7 @@ Trigger: HTTP - POST
 PARIS 2 Table: osc_inventory_balance
 
 #-#-#
-Description: Syncs updated ROB from PARIS 2 to PARIS 1.
+Description: Syncs updated ROB (Reserves On Board) from PARIS 2 to PARIS 1.
 Lambda: syncOscInventoryBalanceToP1	
 Trigger: SNS
 SNS Topic: paris2-inventory-balance-sync-to-p1-qa2
@@ -608,7 +864,7 @@ Sync Rule - Lube oil consumption
 Steps for debugging:
 1. Check if fmloilconsumption table on mini-server has is_exported flag equal to 1.
 2. Check the XML file generated to have details of given records.
-3. Check if lastmodified date is prior to the latest record in fmlemailtooffice.
+3. Check if lastmodified date is greater than the latest record in fmlemailtooffice.
 4. If all checks pass, then the issue is on PARIS 1 office side import. 
 5. If the checks do not pass, then the issue is with the mini-server exported XML.
 
@@ -619,17 +875,17 @@ Steps for debugging:
 1. Get inv_id for a given inventory item from fmlosc_inv_balance_update table.
 2. Check if any record exists in fmlosc_inventory_balance table for this inv_id as id.
 3. Check the XML file generated to have details of given records.
-4. Check if lastmodified date is prior to the latest record in fmlemailtooffice.
+4. Check if lastmodified date is greater than the latest record in fmlemailtooffice.
 5. If all the above checks pass, then the issue is on PARIS 1 office side import. 
 6. If the checks do not pass, then the issue is with the mini-server exported XML.
 
 #-#-#
-Issue: Ship not receiving updated ROB.
+Issue: Ship not receiving updated ROB (Reserves On Board).
 Sync Rule - Inventory balance	
 Steps for debugging:
 1. Check fmlosc_inventory_balance table in PARIS 1 to have proper item_code.
 2. Check the exported XML to have details of given records.
-3. Check if lastmodified date is prior to the latest record in fmlemailtoship.
+3. Check if lastmodified date is greater than the latest record in fmlemailtoship.
 4. If all the above checks pass, then the issue is on mini-server side import.
 5. If the checks do not pass, then the issue is with the PARIS 1 exported XML.
 
@@ -640,7 +896,7 @@ Lambda: syncOscInventoryBalanceUpdateFromParis1
 Steps for debugging:
 1. Get inv_id from PARIS 1 table fmlosc_inv_balance_update for a consumption/adjustment record in question.
 2. Check if there is a record in PARIS 1 table fmlosc_inventory_balance for this inv_id as id.
-3. If ROB record does exist, trigger lambda manually from AWS and check cloudwatch logs of for any error messages.
+3. If ROB (Reserves On Board) record does exist, trigger lambda manually from AWS and check cloudwatch logs of for any error messages.
 4. Carry out local code debugging. First check if sync is failing due to wrong lastmodified timestamp used to query PARIS 1 table.
 
 #-#-#
@@ -663,7 +919,7 @@ Steps for debugging:
 4. Carry out local code debugging if further analysis is required.
 
 #-#-#
-Issue: OSC will fail to post updated inventory ROB to PARIS 2.
+Issue: OSC will fail to post updated inventory ROB (Reserves On Board) to PARIS 2.
 Lambda: postOscInventoryBalance
 Steps for debugging:
 1. Use Swagger to post inventory balance.
@@ -672,7 +928,7 @@ Steps for debugging:
 4. Carry out local code debugging if further analysis is required.
 
 #-#-#
-Issue: Updated inventory ROB is not syncing with PARIS 1. Ship has outdated ROB.
+Issue: Updated inventory ROB (Reserves On Board) is not syncing with PARIS 1. Ship has outdated ROB.
 Lambda: syncOscInventoryBalanceToP1
 Steps for debugging:
 1. Check osc_inventory_balance table in PARIS 2 Vessel DB to have expected records.
@@ -715,8 +971,7 @@ PARIS 1 table: fmlrequisitionfeedback
 Sync direction: Ship to Office
 #-#-#
 
-
-# PARIS 2 Sync Jobs and APIs
+Description: PARIS 2 Sync Job for synchronizing requisitions from PARIS 1.
 Lamdba: syncRequisitionsFromParis1	
 Trigger: CRON	
 Frequency: Every 24hrs
@@ -725,26 +980,29 @@ PARIS 1 Table: fmlrequisition, fmlrequisitionpart
 PARIS 2 Table: requisition, requisition_part
 
 #-#-#
+Description: API used by OSC to fetch new and updated requisitions from PARIS 2.
 Lambda: queryRequisitions	
 Trigger: HTTP - GET	
-Endpoint: /inventory/query-inventory-consumption-updates
+Endpoint: /requisition/query
 GET parameters: vessel_id, product_group, subgroup, updated_since, offset, limit 	 	
 PARIS 1 Tables: fmlrequisition, fmlrequisitionpart
 
 #-#-#
+Description: API used by OSC to create requisitions in PARIS 2.
 Lambda: createRequisition	
 Trigger: HTTP - POST
-Endpoint: /inventory/query-inventory-adjustment-updates
-GET parameters: vessel_id, updated_since, offset, limit
+Endpoint: /requisition/create
 PARIS 2 Tables: requisition, requisition_part
 
 #-#-#
+Description: API used by OSC to update requisitions in PARIS 2.
 Lambda: patchRequisition
-Trigger: HTTP - POST
-Endpoint: /inventory/osc-inventory-balance/{vessel_id}
+Trigger: HTTP - PATCH
+Endpoint: /requisition/patch/{id}
 PARIS 2 Tables: purchase_order, purchase_order_line
 
 #-#-#
+Description: PARIS 2 Sync job for synchronizing new and updated requisition to PARIS 1.
 Lambda: syncRequisitionToParis1	
 Trigger: SNS
 SNS Topic: paris2-inventory-balance-sync-to-p1-qa2	
@@ -752,6 +1010,7 @@ PARIS 1 Tables: fmlrequisition, fmlrequisitionpart
 PARIS 2 Tables: requisition, requisition_part, purchase_order, purchase_order_line
 
 #-#-#
+Description: PARIS 2 Sync job for synchronizing purchase receipts from PARIS 1.
 Lambda: triggerSyncPurchaseReceiptsFromParis1
 Trigger: CRON
 Frequency: Every 24hrs

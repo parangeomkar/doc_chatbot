@@ -1,22 +1,14 @@
-from spacy.lang.en import English
 import re
 import pandas as pd
 import requests
 
 model = "all-minilm"
 
-# nlp = English()
-# nlp.add_pipe("sentencizer")
-
 f = open('data.txt', 'r', encoding="utf8")
 rawText = f.read()
 f.close()
 
 textDataArray = rawText.split("#-#-#")
-
-# sentenceList = list(nlp(rawText).sents)
-# textDataArray = [str(sentence) for sentence in sentenceList]
-
 num_sentence_chunk_size = 1
 
 def split_list(input_list: list, slice_size: int) -> list[list[str]]:

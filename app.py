@@ -1,10 +1,9 @@
-from spacy.lang.en import English
 import numpy as np
 import pandas as pd
 from sentence_transformers import util
 import torch
 import requests
-from flask import Flask, request, Response, jsonify, render_template_string, stream_with_context
+from flask import Flask, request, Response, jsonify, render_template_string, stream_with_context, render_template
 
 app = Flask(__name__)
 model = "llama3"
@@ -44,7 +43,8 @@ def ask():
     context_items = [sentences[i] for i in indices[::-1]]
     context = "- " + "\n- ".join(context_items)
     print(context_items)
-    base_prompt = """Based on the following context items, please answer the query.
+    base_prompt = """Based on the following context items, please answer the query explaining only relevant information. 
+    Provide details or steps wherever needed. If no information found in context the try to answer based on your knowledge but keep it relevant to the context.
     {context}
     \n
     User query: {query}
@@ -56,53 +56,7 @@ def ask():
 
 @app.route('/', methods=['GET'])
 def get_html():
-    # Define your HTML content
-    html_content = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Sample ChatBot</title>
-        <script>
-            async function ask(){
-                const output = document.getElementById('answer');
-                output.innerHTML = '';  // Clear previous output
-
-                const query = document.getElementById("query").value;
-                const response = await fetch("http://localhost:5000/query",{
-                    method: "POST",
-                    body: JSON.stringify({
-                        query
-                    }),
-                    headers: {
-                        "content-type": "application/json"
-                    }
-                })
-            
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder('utf-8');
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    const newParagraph = document.createElement('span');
-                    newParagraph.textContent = JSON.parse(String(chunk)).response;
-                    output.appendChild(newParagraph);
-                }
-            }
-        </script>
-    </head>
-    <body>
-        <h1>Ask anything about inventory management and requisitions! (^,^)</h1>
-        <div>
-            <textarea id="query"></textarea>
-            <div id="answer"></div>
-            <button onclick="ask()">Submit</button>
-        </div>
-    </body>
-    </html>
-    """
-    return render_template_string(html_content)
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run()
