@@ -1,0 +1,1166 @@
+This document explains the design of inventory and requisitions synchronization flow and basic debugging tips for troubleshooting issues with synchronization.
+
+
+
+The scope of the document is limited to spares and lube oil consumption, adjustment and requisitions.
+
+
+
+
+
+
+Table of content:
+
+Spares and Lube Oil Inventory
+
+
+
+1.1 Inventory Data Model
+
+
+
+1.2 Inventory Synchronization Sequence
+
+
+
+       1.2.1 Spares consumption/adjustment synchronization
+
+
+
+       1.2.2 Lube Oil consumption/adjustment synchronization
+
+
+
+       1.2.3 All Inventory updated on hand quantity synchronization
+
+
+
+1.3 Spares Sync Rules, CRON Jobs and APIs
+
+
+
+       1.3.1 PARIS 1 - Mini-Server Sync Rules
+
+
+
+       1.3.2 PARIS 2 Sync Jobs and APIs
+
+
+
+1.4 Inventory Synchronization Failure Troubleshooting
+
+
+
+       1.4.1 Lambda/Sync rule debugging
+
+
+
+        1.4.2 Known Issues
+
+
+
+Requisitions
+
+2.1 Requisition Data Model
+
+
+
+2.2 Requisition Synchronization Sequence
+
+
+
+       2.2.1 Requisition Creation - Mini-Server to OSC
+
+
+
+       2.2.2 Purchase Order + New Requisition - OSC to Mini-Server
+
+
+
+       2.2.3 Purchase Receipt - Mini-Server to OSC
+
+
+
+2.3 Requisition Sync Rules, CRON Jobs and APIs
+
+
+
+       2.3.1 PARIS 1 - Mini-Server Sync Rules
+
+
+
+       2.3.2 PARIS 2 Sync Jobs and APIs
+
+
+
+2.4 Requisition Synchronization Failure Troubleshooting
+
+
+
+       2.4.1 Lambda/Sync rule debugging
+
+
+
+        2.4.2 Known Issues
+
+
+
+
+
+
+1. Spares and Lube Oil Inventory
+
+In this section we describe the data models, synchronization sequences, the lambdas and APIs used along with the known issues and how to debug them for spares and lube oil inventory.
+
+
+
+
+
+
+*Note: Same tables as spares inventory are used for other inventory types for sending consumption and receiving on hand quantity. Only lube oil uses different table for consumption under position report.
+
+
+
+
+1.1 Inventory Data Model
+
+
+
+
+
+Spares and lube oil inventory adjustment/consumption data model
+
+
+1.2 Inventory Synchronization Sequences
+
+
+
+
+1.2.1 Spares consumption/adjustment synchronization
+
+
+
+
+
+Spares consumption/adjustment flow from Mini-server to OSC
+
+
+1.2.2 Lube Oil consumption/adjustment synchronization
+
+
+
+
+
+Lube Oil consumption/adjustment flow from Mini-server to OSC
+
+
+1.2.3 All Inventory updated on hand quantity synchronization
+
+
+
+
+
+Spares updated on hand quantity from OSC to Mini-Server
+
+
+
+
+1.3 Spares Sync Rules, CRON Jobs and APIs
+
+In this section we describe sync rules used for PARIS 1 and mini-server synchronization along with CRONs and APIs for synchronization between PARIS 2 and PARIS 1.
+
+
+
+
+
+
+1.3.1 PARIS 1 - Mini-Server Sync Rules
+
+PARIS 1 sync rules can be accessed here: https://paris.fleetship.com/fml/controller/loadExportModule
+
+
+
+
+
+
+*Note: All the sync rules in PARIS 1 are present on mini-server as well.
+
+
+
+
+
+
+Sync Rule
+
+
+
+Module Group
+
+
+
+Group ID
+
+
+
+Group Query ID
+
+
+
+Table
+
+
+
+Direction
+
+
+
+Lube oil consumption  Ship Inventory
+
+323
+
+
+
+325
+
+
+
+fmloilconsumption       Ship to Office
+
+Inventory consumption/adjustment     Ship Inventory
+
+325
+
+
+
+327
+
+
+
+fmlosc_inv_balance_update    Ship to Office
+
+Inventory balance         Ship Inventory
+
+324
+
+
+
+326
+
+
+
+fmlosc_inventory_balance       Office to Ship
+
+
+
+
+
+
+
+1.3.2 PARIS 2 Sync Jobs and APIs
+
+Inventory API repository: https://bitbucket.org/fleetshipteam/paris2-api-inventory
+
+
+
+
+
+
+Lambda
+
+
+
+Description
+
+
+
+Trigger
+
+
+
+PARIS 1 Tables
+
+
+
+PARIS 2 Tables
+
+
+
+syncOscInventoryBalanceUpdateFromParis1
+
+Sync inventory consumption/adjustment from PARIS 1 to PARIS 2.
+
+
+
+
+
+
+Frequency: Every 24hrs
+
+Retry logic: Sync everything after last sync time
+
+CRON
+
+
+
+fmlosc_inv_balance_update    inventory_update
+
+queryInventoryConsumptionUpdates
+
+Get inventory consumption from PARIS 2.
+
+
+
+
+
+
+Endpoint: /inventory/query-inventory-consumption-updates
+
+GET parameters: vessel_id, product_group, subgroup, updated_since, offset, limit
+
+HTTP - GET
+
+
+
+-
+
+
+
+inventory_update
+
+queryInventoryAdjustmentUpdates
+
+Get inventory adjustment from PARIS 2.
+
+
+
+
+
+
+Endpoint: /inventory/query-inventory-adjustment-updates
+
+GET parameters: vessel_id, updated_since, offset, limit
+
+HTTP - GET
+
+
+
+-
+
+
+
+inventory_update
+
+postOscInventoryBalance
+
+Post updated ROB to PARIS 2.
+
+
+
+
+
+
+Endpoint: /inventory/osc-inventory-balance/{vessel_id}
+
+Retry logic: OSC implemented
+
+HTTP - POST
+
+
+
+-
+
+
+
+osc_inventory_balance
+
+syncOscInventoryBalanceToP1
+
+Syncs updated ROB from PARIS 2 to PARIS 1.
+
+
+
+
+
+
+SNS Topic: paris2-inventory-balance-sync-to-p1-qa2
+
+SNS Message Trigger: postOscInventoryBalance
+
+Retry logic: Sync everything after last sync time
+
+SNS
+
+
+
+fmlosc_inventory_balance
+
+-
+
+
+
+syncLubOilConsumptionFromParis1
+
+Sync lube oil consumption in position report from PARIS 1 to PARIS 2.
+
+
+
+
+
+
+Frequency: Every 24hrs
+
+Retry logic: Sync everything after last sync time
+
+CRON
+
+
+
+fmloilconsumption       lub_oil_inventory_update
+
+inventory_update
+
+
+
+
+
+
+
+
+
+
+1.4 Inventory Synchronization Failure Troubleshooting
+
+1.4.1 Lambda/Sync rule debugging
+
+
+
+Debugging
+
+
+
+Sync Rule - Lube oil consumption
+
+
+
+Impact of failure -
+
+PARIS 1 will not have updated lube oil consumption from position report.
+
+
+
+Debugging -
+
+Check if fmloilconsumption table on mini-server has is_exported flag equal to 1.
+
+Check the XML file generated to have details of given records.
+
+Check if lastmodified date is prior to the latest record in fmlemailtooffice.
+
+If all checks pass, then the issue is on PARIS 1 office side import.
+
+If the checks do not pass, then the issue is with the mini-server exported XML.
+
+
+
+Sync Rule - Inventory consumption/adjustment
+
+
+
+Impact of failure -
+
+PARIS 1 will not have updated inventory consumption/adjustments.
+
+
+
+Debugging -
+
+Get inv_id for a given inventory item from fmlosc_inv_balance_update table.
+
+Check if any record exists in fmlosc_inventory_balance table for this inv_id as id.
+
+Check the XML file generated to have details of given records.
+
+Check if lastmodified date is prior to the latest record in fmlemailtooffice.
+
+If all the above checks pass, then the issue is on PARIS 1 office side import.
+
+If the checks do not pass, then the issue is with the mini-server exported XML.
+
+
+
+
+
+Sync Rule - Inventory balance
+
+
+
+Impact of failure -
+
+Ship will not receive updated ROB.
+
+
+
+Debugging -
+
+Check fmlosc_inventory_balance table in PARIS 1 to have proper item_code.
+
+Check the exported XML to have details of given records.
+
+Check if lastmodified date is prior to the latest record in fmlemailtoship.
+
+If all the above checks pass, then the issue is on mini-server side import.
+
+If the checks do not pass, then the issue is with the PARIS 1 exported XML.
+
+
+
+Lambda-
+
+syncOscInventoryBalanceUpdateFromParis1
+
+
+
+Impact of failure -
+
+PARIS 2 inventory consumption/adjustment data would become outdated.
+
+
+
+Debugging -
+
+1. Get inv_id from PARIS 1 table fmlosc_inv_balance_update for a consumption/adjustment record in question.
+
+Check if there is a record in PARIS 1 table fmlosc_inventory_balance for this inv_id as id.
+
+If ROB record does exist, trigger lambda manually from AWS and check cloudwatch logs of for any error messages.
+
+Carry out local code debugging. First check if sync is failing due to wrong lastmodified timestamp used to query PARIS 1 table.
+
+
+
+Lambda -
+
+queryInventoryConsumptionUpdates
+
+
+
+Impact of failure -
+
+OSC will not receive inventory update and ROB will be outdated.
+
+
+
+Debugging -
+
+Use Swagger to query inventory consumption.
+
+Check inventory_update table in PARIS 2 Vessel DB to have expected records.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+
+
+Lambda -
+
+queryInventoryAdjustmentUpdates
+
+
+
+Impact of failure -
+
+OSC will not receive inventory update and ROB will be outdated.
+
+
+
+Debugging -
+
+Use Swagger to query inventory consumption.
+
+Check inventory_update table in PARIS 2 Vessel DB to have expected records.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+Lambda-
+
+postOscInventoryBalance
+
+
+
+Impact of failure -
+
+OSC will fail to post updated inventory ROB to PARIS 2.
+
+Ship will have outdated ROB.
+
+
+
+Debugging -
+
+Use Swagger to post inventory balance.
+
+Check osc_inventory_balance table in PARIS 2 Vessel DB to have posted records.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+Lambda -
+
+syncOscInventoryBalanceToP1
+
+
+
+Impact of failure -
+
+Updated inventory ROB will not be synced with PARIS 1.
+
+Ship will have outdated ROB.
+
+
+
+Debugging -
+
+Check osc_inventory_balance table in PARIS 2 Vessel DB to have expected records.
+
+Concerned osc_inventory_balance records should have updated_at time greater than last_sync_time in sync_metadata table in PARIS 2 Vessel DB.
+
+Trigger lambda manually from AWS and check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+Lambda -
+
+syncLubOilConsumptionFromParis1
+
+
+
+Impact of failure -
+
+Lube oil consumption will not be synced with PARIS 2.
+
+
+
+Debugging -
+
+Check if fmlosc_inventory_balance table in PARIS 1 to have record against lube oil item code in question for a given shipid.
+
+Check inventory_update and lub_oil_inventory_update table in PARIS 2 Vessel DB to have updated_at time lower than last_sync_time in sync_metadata table in PARIS 2 Item Master DB.
+
+Check fmloilconsumption table in PARIS 1 to have lastmodified time greater than last_sync_time in sync_metadata table in PARIS 2 Vessel DB.
+
+Trigger lambda manually from AWS and check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+
+
+
+
+1.4.2 Known Issues
+
+Issue
+
+
+
+Possible cause
+
+
+
+How to debug
+
+
+
+Inventory consumption/adjustment not syncing with PARIS 2  PARIS 2 sync job only syncs consumption/adjustment for spares with ROB in osc_inventory_balance table in PARIS 1.           1. Get inv_id from PARIS 1 table fmlosc_inv_balance_update for a consumption/adjustment record in question.
+
+2. Check if there is a record in PARIS 1 table fmlosc_inventory_balance for this inv_id as id.
+
+3. If ROB record does exist, proceed with debugging the for inventory API lambda sync_osc_inventory_balance_update.
+
+4. Check cloudwatch logs of sync_osc_inventory_balance_update for any error messages or 900 sec lambda timeout.
+
+5. Carry out local code debugging. First check if sync is failing due to wrong lastmodified timestamp used to query PARIS 1 table.
+
+Lube Oil consumption from position report is not being saved on mini-server  Oil consumption is not saved on first submit of position report. However, it is saved when consumption is submitted in edit mode of position report.              1. Check fmloilconsumption table has reportid against concerned records.
+
+2. Navigate to position report in question and click edit.
+
+3. Submit oil consumption again.
+
+4. Check if new records were inserted in fmloilconsumption table with reportid.
+
+Lube Oil consumption from position report is not syncing with PARIS 1              Consumption is synced only after it is submitted for export.    1. Analyze the exported excel file for entries you wish to sync.
+
+2. If entries do not exist, then the report is not submitted for export.
+
+3. Navigate to the position report in question and check if it is submitted for export.
+
+OSC inventory balance is not syncing from PARIS 2 to PARIS 1              Performace issue with the lambda code           1. Check if syncOscInventoryBalanceToP1 lambda is timing out in cloudwatch logs.
+
+2. If lambda successfully completes the sync, proceed with local code debugging. Check for incorrect last_sync_time.
+
+
+
+
+
+
+
+
+2. Requisitions
+
+In this section we describe the data models, synchronization sequences, the lambdas and APIs used along with the known issues and how to debug them for requisitions.
+
+
+
+
+
+
+
+
+
+2.1 Data Model
+
+
+
+
+
+
+
+
+
+
+
+2.2 Synchronization sequence
+
+2.2.1 Requisition Creation - Mini-Server to OSC
+
+
+
+
+
+2.2.2 Purchase Order + New Requisition - OSC to Mini-Server
+
+
+
+
+
+2.2.3 Purchase Receipt - Mini-Server to OSC
+
+
+
+
+
+
+
+
+
+2.3 Spares Sync Rules, CRON Jobs and APIs
+
+In this section we describe sync rules used for PARIS 1 and mini-server synchronization along with CRONs and APIs for synchronization between PARIS 2 and PARIS 1.
+
+
+
+
+
+
+2.3.1 PARIS 1 - Mini-Server Sync Rules
+
+PARIS 1 sync rules can be accessed here: https://paris.fleetship.com/fml/controller/loadExportModule
+
+
+
+
+
+
+*Note: All the sync rules in PARIS 1 are present on mini-server as well.
+
+
+
+
+
+
+Sync Rule
+
+
+
+Module Group
+
+
+
+Group ID
+
+
+
+Group Query ID
+
+
+
+Table
+
+
+
+Direction
+
+
+
+Requisition        Requisition        5            7            fmlrequisition  First Office to Ship then Ship to Office
+
+Requisition part             Requisition        5            8            fmlrequisitionpart              First Office to Ship then Ship to Office
+
+Requisition feedback   Requisition        38          46              fmlrequisitionfeedback             Ship to Office
+
+
+
+
+2.3.2 PARIS 2 Sync Jobs and APIs
+
+Requisition API repository: https://bitbucket.org/fleetshipteam/paris2-api-requisition
+
+
+
+
+
+
+Lambda
+
+
+
+Trigger
+
+
+
+Description
+
+
+
+PARIS 1 Tables
+
+
+
+PARIS 2 Tables
+
+
+
+syncRequisitionsFromParis1    CRON  Frequency: Every 24hrs
+
+Retry logic: Sync everything after last sync time            fmlrequisition
+
+fmlrequisitionpart         requisition
+
+requisition_part
+
+queryRequisitions         HTTP - GET        Endpoint: /inventory/query-inventory-consumption-updates
+
+GET parameters: vessel_id, product_group, subgroup, updated_since, offset, limit                      fmlrequisition
+
+fmlrequisitionpart
+
+createRequisition          HTTP - POST     Endpoint: /inventory/query-inventory-adjustment-updates
+
+GET parameters: vessel_id, updated_since, offset, limit                           requisition
+
+requisition_part
+
+patchRequisition           HTTP - POST     Endpoint: /inventory/osc-inventory-balance/{vessel_id}                purchase_order
+
+purchase_order_line
+
+syncRequisitionToParis1            SNS      SNS Topic: paris2-inventory-balance-sync-to-p1-qa2            fmlrequisition
+
+fmlrequisitionpart         requisition
+
+requisition_part
+
+purchase_order
+
+purchase_order_line
+
+triggerSyncPurchaseReceiptsFromParis1         CRON  Frequency: Every 24hrs    fmlrequisitionpart
+
+fmlrequisitionfeedback             purchase_receipt
+
+purchase_receipt_line
+
+
+
+
+
+
+
+2.4 Requisition Synchronization Failure Troubleshooting
+
+2.4.1 Lambda/Sync rule debugging
+
+
+
+Sync Rule - Requisition
+
+
+
+Impact of failure -
+
+Requisitions created on mini-server will not sync to OSC and OSC created purchase order will not sync to mini-server.
+
+
+
+Debugging -
+
+Check the XML file generated to have details of given records.
+
+If not, check if lastmodified date in fmlrequisition is prior to the latest record in fmlemailtooffice/fmlemailtoship.
+
+If all checks pass, then the issue is on the side that imports the XML.
+
+If the checks do not pass, then the issue is with the side XML is exported.
+
+
+
+
+
+Sync Rule - Requisition part
+
+
+
+Impact of failure -
+
+Requisitions created on mini-server will not sync to OSC and OSC created will not sync to mini-server.
+
+
+
+Debugging -
+
+Check the XML file generated to have details of given records.
+
+If not, check if lastmodified date in fmlrequisitionpart is prior to the latest record in fmlemailtooffice/fmlemailtoship.
+
+If all checks pass, then the issue is on the side that imports the XML.
+
+If the checks do not pass, then the issue is with the side XML is exported.
+
+
+
+
+
+Sync Rule - Requisition feedback
+
+
+
+Impact of failure -
+
+Purchase receipt will not sync to OSC.
+
+
+
+Debugging -
+
+Check the XML file generated to have details of given records.
+
+If not, check if lastmodified date in fmlrequisitionfeedback is prior to the latest record in fmlemailtooffice.
+
+If all checks pass, then the issue is on the PARIS 1 import.
+
+If the checks do not pass, then the issue is with the mini-server XML export.
+
+
+
+Lambda - syncRequisitionsFromParis1
+
+
+
+Impact of failure -
+
+Requisitions will not sync with PARIS 2 and then OSC.
+
+
+
+Debugging -
+
+Check fmlrequisition, fmlrequisitionpart tables in PARIS 1 DB to have expected records.
+
+Concerned records should have lastmodified time greater than last_sync_time in sync_metadata table in PARIS 2 Vessel DB.
+
+Trigger lambda manually from AWS.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+
+
+Lambda - queryRequisitions
+
+
+
+Impact of failure -
+
+OSC will not be able to fetch new requisitions from PARIS 2.
+
+
+
+Debugging -
+
+Use Swagger to query requisitions.
+
+Check requisition tables in PARIS 2 Vessel DB to have expected records.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+Lambda -
+
+createRequisition
+
+
+
+Impact of failure -
+
+OSC will not be able to submit new requisitions to PARIS 2.
+
+
+
+Debugging -
+
+Use Swagger to create new requisition.
+
+Check requisition table in PARIS 2 Vessel DB to have posted records.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+
+
+Lambda - patchRequisition
+
+
+
+Impact of failure -
+
+OSC will not be able to submit purchase order to PARIS 2.
+
+
+
+Debugging -
+
+Use Swagger to update an existing requisition.
+
+Check requisition table in PARIS 2 Vessel DB to have posted records.
+
+Trigger lambda manually from AWS and check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+Lambda - syncRequisitionToParis1
+
+
+
+Impact of failure -
+
+Mini-server will not receive requisition related updates.
+
+
+
+Debugging -
+
+Requisition is synced one at a time using requisition ID. Check requisition, requisition_part, purchase_order, purchase_order_line tables in PARIS 2 Vessel DB to have expected records.
+
+Check cloudwatch logs for any error messages.
+
+Carry out local code debugging if further analysis is required.
+
+
+
+Lambda - triggerSyncPurchaseReceiptsFromParis1
+
+
+
+Impact of failure -
+
+PARIS 2 and OSC will not receive purchase receipts.
+
+
+
+Debugging -
+
+Check fmlrequisitionfeedback table in PARIS 1 to have expected records with lastmodified greater than most recent updated_at timestamp in purchase_receipt table in PARIS 2 Vessel DB.
+
+Trigger lambda manually and check cloudwatch logs for any errors.
+
+Carry out local debugging.
+
+
+
+
+
+
+Note: This function is hosted on docker as an express.js server for some reason instead of lambda. Check sync-purchase-receipts.js for further analysis.
+
+
+
+
+
+
+
+
+
+2.4.2 Known Issues
+
+
+
+Issue
+
+Requisitions created on OSC not syncing to mini-server.
+
+
+
+Possible cause
+
+PARIS 1 does not sync requisitions with Not Sent status with mini-server.
+
+
+
+How to debug
+
+1. Query fmlrequisition table in PARIS 1 and check if the status of requisition in question is “Not Sent”
+
+
+
+Issue
+
+Ordered quantity is equal to request quantity and is not syncing
+
+
+
+Possible cause
+
+Existing bug in PARIS 1 sync rules that sets ordered quantity equal to received quantity.
+
+
+
+How to debug
+
+1. Check fmlrequisitionpart table in PARIS 1 for inventory part of concern.
+
+2. Check if ordered quantity and received quantity is same.

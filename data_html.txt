@@ -1,0 +1,592 @@
+# Inventory Management - Requisition Screen Changes Technical Design
+
+## Why requisition screen on mini-server is getting revamped?
+The booking codes for spares will be revamped for which the UI on mini-server will also be updated to accommodate these changes.
+
+## What are the features of new mini-server requisition screen?
+1. To allow user to add/edit/delete draft requisitions.
+2. To allow user to add/edit/delete vessel components as booking code categories and subcategories for spares requisition.
+3. To allow user to add/edit/delete spare parts for each subcategory separately.
+4. To auto-populate maker, model, serial number for selected category/subcategory.
+
+## High level design for creating spares requisition on mini-server using new module
+1. Select reason for requisition and department.
+2. Select booking code "Machinery Spares" under "Spares" product group.
+3. Select "Category" from dropdown which has a list of top level SFI code components.
+4. After selecting "Category", a "Subcategory" dropdown will appear where the sub-components of selected category would be listd.
+5. Click on "Add Subcategory" button and select required subcategories. Subcategories with multiple make and model are allowed for raising requisitions.
+6. After selection subcategories, set the make, model and serial number for each sub-category. These fields would be auto-populated if they exist in the database. While make and model are mandatory fields, the serial number is not.
+7. After saving requisition, the requisition details page would be loaded which will have draft requisition group. Multiple draft requisition groups would be created if selected subcategories have different make and model. The subcategories with same make and model would be grouped under single draft requisition group.
+8. Spare parts must be added for each selected subcategory. If the subcategory has parts in database then a list would be displayed where required spares can be selected by clicking checkbox at end of each row or by adding non-zero request quantity. Request quantity and unit are mandatory fields. Specification is optiona. 
+9. If the spares are not present in the database for selected subcategory then parts can be added manually by clicking "Add Part" button at the top right corner of screen.
+10. For removing the part, a checkbox can be deselected from spare parts list screen or by clicking delete button displayed against spare part in requisition details screen.
+11. To remove subcategories, click on "Edit" button at the top right corner of requisition details screen and the go to "Add Subcategory" option. Deselect checkbox against the subcategory that needs to be deleted and save the requisition.
+12. If the subcategory is deselected, then the parts added against it would also be deleted from draft requisition.
+13. On requisitions list screen, draft requisitions will be listed with "DRAFT" in "Status" column. Only draft requisitions could be edited or deleted.
+14. To close or finalize requisition and send for order, click on "Close Requisition" button on requisition details page.
+15. In case, multiple subcategories with different make and model had been selected. Multiple requisitions would be created for each make and model group. Same make and model subcategories woudl be grouped under same requisition.
+
+
+
+## Low Level Design:
+-Below are the low-level changes needed to accommodate the updates related to the SFI codes, categorized by Paris 2.0, Paris 1.0, mini-server, and OSC -
+
+-PARIS 2.0 has postgres database, PARIS 1.0 has oracle database and mini-server has either mariadb or mysql database.
+
+### Paris 2.0 database changes:
+<ol>
+	<li>A new column "inv_flag" will be added to "vessel" table to identify inventory management enabled vessels.</li>
+	<li>This flag is required to distinguish booking codes received from OSC. For example, "Main Engine" is a booking code as well as Subcategory.</li>
+	<li>For inventory enabled vessels (inv_flag = true), when requisitions are synced from PARIS 2 to PARIS 1, all the new requisitions for Spares product group will be synced with booking code of "Machinery Spares" in fmlrequisition table of PARIS 1. </li>
+</ol>
+
+<ol>
+  <li>
+	<ul>
+		<li>Database name: VESSEL</li>
+		<li>Table name: VESSEL </li>
+		<li>Type: Exiting table</li>
+		<li>
+			New columns: 
+			<ol>
+				<li>inv_flag - boolean</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+</ol>
+
+### Paris 1.0 database changes:
+<ol>
+  <li>
+	<ul>
+		<li>Database name: PARIS</li>
+		<li>Table name: FMLREQUISITIONPARTS </li>
+		<li>Type: Exiting table</li>
+		<li>
+			New columns: 
+			<ol>
+				<li>SUBCATEGORY_ID - integer</li>
+				<li>DRAWING_NAME - varchar(150)</li>
+				<li>DRAWING_NUMBER - varchar(150)</li>
+				<li>ITEM_NUMBER - varchar(30)</li>
+				<li>PART_NAME - varchar(240)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: PARIS</li>
+		<li>Table name: FML_INVENTORY_BOOKING_CODES </li>
+		<li>Type: New table</li>
+		<li>
+			New columns: 
+			<ol>
+				<li>New table</li>
+				<li>BOOKING_CODE_ID - integer</li>
+				<li>IS_INVENTORY_BOOKING_CODE - bool</li>
+				<li>CREATED_AT - date</li>
+				<li>UPDATED_AT - date</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+</ol>
+
+<ol>
+	<li>New master booking code "Machinery Spares" will be added in fmlattributecodes "Spares" category.</li>
+	</ol>
+
+### Mini-server database changes:
+<ul>
+	<li>Restructure the new mini-server tables for requisition to allow user to order parts based on component categories. This allows user to add/edit/remove vessel components as categories and subcategories.</li>
+	<li>The records in draft tables would be temporary and be hard deleted once the requisition is submitted.</li>
+	<li>On submission of requision draft, new records will be created in fmlrequisition and fmlrequisitionpart table.</li>
+	<li>Multiple requisitions would be created in case selected subcategories have different maker or model.</li>
+</ul>
+
+<ol>
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: FMLREQUISITIONPARTS </li>
+		<li>Type: Exiting table</li>
+		<li>
+			New columns: 
+			<ol>
+				<li>SUBCATEGORY_ID - integer</li>
+				<li>DRAWING_NAME - varchar(150)</li>
+				<li>DRAWING_NUMBER - varchar(150)</li>
+				<li>ITEM_NUMBER - varchar(30)</li>
+				<li>PART_NAME - varchar(240)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: FML_INVENTORY_BOOKING_CODES </li>
+		<li>Type: New table</li>
+		<li>
+			New columns: 
+			<ol>
+				<li>ID - identity</li>
+				<li>BOOKING_CODE_ID - integer</li>
+				<li>IS_INVENTORY_BOOKING_CODE - bool</li>
+				<li>CREATED_AT - date</li>
+				<li>UPDATED_AT - date</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: FML_DRAFT_REQUISITION_SUBCATEGORIES</li>
+		<li>Type: New table</li>
+		<li>
+			New columns: 
+			<ol>
+				<li>ID identity</li>
+				<li>DRAFT_REQUISITION_ID - integer</li>
+				<li>SUBCATEGORY_ID - integer</li>
+				<li>MAKER - varchar(40)</li>
+				<li>MODEL - varchar(40)</li>
+				<li>SERIAL_NUMBER - varchar(150)</li>
+				<li>CREATED_AT - date</li>
+				<li>UPDATED_AT - date</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: FML_DRAFT_REQUISITION</li>
+		<li>Type: New table</li>
+		<li>
+			Same schema as FMLREQUISITION table
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: FML_DRAFT_REQUISITION_PARTS</li>
+		<li>Type: New table</li>
+		<li>
+			Same schema as FMLREQUISITIONPART table. However, "REQUISITIONID" column is named as "DRAFT_REQUISITION_ID"
+		</li>
+	</ul>
+  </li>
+</ol>
+
+## Source Code Changes
+### PARIS 2.0
+<ul>
+	<li>Update requisitions PARIS 1.0 to PARIS 2.0 sync new "fmlrequisitionpart" columns from PARIS 1 which hold "master_sfi_codes" table id as subcategory id for inventory enabled vessels.</li>
+	<li>Update requisition query API to send category and subcategory data to OSC.</li>
+</ul>
+
+### PARIS 1
+<ul>
+	<li>New sync rule will be created for "fmlrequisitionparts" and "fml_inventory_booking_codes" table specifically for inventory enabled vessels.</li>
+</ul>
+ 
+
+### Mini-Server
+<ul>
+	<li>Update requisitions JSP to use new design for spares inventory.</li>
+	<li>Update requisitions controller to insert new fields along with new booking code.</li>
+</ul>
+
+### OSC
+<ul>
+	<li>OSC will be updating its UI for category and subcategory change.</li>
+</ul>
+
+
+## Requisition Changes Propagation Flow: 
+### For Inventory Enabled Vessels
+
+
+
+
+# Mini-Server to OSC: Inventory & Requisitions Synchronization - Design & Debugging
+- This document explains the design of inventory and requisitions synchronization flow and basic debugging tips for troubleshooting issues with synchronization.
+- The scope of the document is limited to spares and lube oil consumption, adjustment and requisitions.
+
+## Spares and Lube Oil Inventory
+- In this section we describe the data models, synchronization sequences, the lambdas and APIs used along with the known issues and how to debug them for spares and lube oil inventory.
+- *Note: Same tables as spares inventory are used for other inventory types for sending consumption and receiving on hand quantity. Only lube oil uses different table for consumption under position report.
+
+## Inventory Data Model
+
+### Mini-server inventory data model
+
+<ol>
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmlosc_inv_balance_update </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>inv_id - integer (not null)</li>
+			  <li>update_osc_quantity - integer (not null)</li>
+			  <li>update_date - date (not null)</li>
+			  <li>remarks - varchar(100)</li>
+			  <li>type - varchar(1)</li>
+			  <li>inventory_opt_type - integer (not null)</li>
+			  <li>operatorid - integer (not null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmlosc_inventory_balance </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, not null)</li>
+			  <li>shipid - integer (not null)</li>
+			  <li>item_code - varchar(40) (not null)</li>
+			  <li>is_spare - integer (not null)</li>
+			  <li>on_hand_quantity - integer (not null)</li>
+			  <li>operatorid - integer (not null)</li>
+			  <li>unit_of_measure - integer (default null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmloilconsumption </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>shipid - integer (not null)</li>
+			  <li>oiltype - varchar(100) (not null)</li>
+			  <li>oilgrade - varchar(300) (not null)</li>
+			  <li>oilconsumtion - varchar(100) (not null)</li>
+			  <li>reportId - varchar(100) (not null)</li>
+			  <li>type - varchar(2) (not null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			  <li>is_exported - integer (not null, default '0')</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmloilconsumptiondetails </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>oiltype - varchar(100) (not null)</li>
+			  <li>oilgrade - varchar(100) (not null)</li>
+			  <li>grade_description - varchar(100) (not null)</li>
+			  <li>item_code - varchar(100) (not null, unique)</li>
+			  <li>is_active - integer (not null, default '1')</li>
+			  <li>operatorid - integer (not null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fml_vessel_spareparts </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>ref_inv_id - integer (default null)</li>
+			  <li>item_code - varchar(40) (default null)</li>
+			  <li>drawingname - varchar(150) (default null)</li>
+			  <li>drawingno - varchar(150) (default null)</li>
+			  <li>itemno - varchar(30) (default null)</li>
+			  <li>partno - varchar(150) (default null)</li>
+			  <li>description - varchar(240) (default null)</li>
+			  <li>part_type_id - char(12) (default null)</li>
+			  <li>is_critical - char(1) (default null)</li>
+			  <li>minimum_rob - integer (default null)</li>
+			  <li>recommended_rob - integer (default null)</li>
+			  <li>manufacturer_name - varchar(100) (default null)</li>
+			  <li>manufacturer_code - char(6) (default null)</li>
+			  <li>bookingcode - integer (default null)</li>
+			  <li>created_at - timestamp (default current_timestamp)</li>
+			  <li>updated_at - timestamp (default current_timestamp)</li>
+			  <li>deleted_at - timestamp (default null)</li>
+			  <li>shipid - integer (default null)</li>
+			  <li>uom - char(3) (default null)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+</ol>
+
+
+### PARIS 1.0 inventory data model
+<ol>
+  <li>
+	<ul>
+		<li>Database name: PARIS</li>
+		<li>Table name: fmlosc_inv_balance_update </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>inv_id - integer (not null)</li>
+			  <li>update_osc_quantity - integer (not null)</li>
+			  <li>update_date - date (not null)</li>
+			  <li>remarks - varchar(100)</li>
+			  <li>type - varchar(1)</li>
+			  <li>inventory_opt_type - integer (not null)</li>
+			  <li>operatorid - integer (not null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmlosc_inventory_balance </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, not null)</li>
+			  <li>shipid - integer (not null)</li>
+			  <li>item_code - varchar(40) (not null)</li>
+			  <li>is_spare - integer (not null)</li>
+			  <li>on_hand_quantity - integer (not null)</li>
+			  <li>operatorid - integer (not null)</li>
+			  <li>unit_of_measure - integer (default null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmloilconsumption </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>shipid - integer (not null)</li>
+			  <li>oiltype - varchar(100) (not null)</li>
+			  <li>oilgrade - varchar(300) (not null)</li>
+			  <li>oilconsumtion - varchar(100) (not null)</li>
+			  <li>reportId - varchar(100) (not null)</li>
+			  <li>type - varchar(2) (not null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			  <li>is_exported - integer (not null, default '0')</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  
+  <li>
+	<ul>
+		<li>Database name: FML</li>
+		<li>Table name: fmloilconsumptiondetails </li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - integer (primary key, auto-incremented)</li>
+			  <li>oiltype - varchar(100) (not null)</li>
+			  <li>oilgrade - varchar(100) (not null)</li>
+			  <li>grade_description - varchar(100) (not null)</li>
+			  <li>item_code - varchar(100) (not null, unique)</li>
+			  <li>is_active - integer (not null, default '1')</li>
+			  <li>operatorid - integer (not null)</li>
+			  <li>lastmodified - timestamp (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+</ol>
+
+
+### PARIS 2.0 inventory data model
+<ol>
+  <li>
+	<ul>
+		<li>Database name: VESSEL</li>
+		<li>Table name: inventory_update</li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - serial4 (primary key, not null)</li>
+			  <li>vessel_id - int4 (null)</li>
+			  <li>item_code - varchar(40) (not null)</li>
+			  <li>product_group - varchar(150) (null)</li>
+			  <li>subgroup - varchar(150) (null)</li>
+			  <li>quantity_change - int4 (not null)</li>
+			  <li>quantity_change_date - date (null)</li>
+			  <li>unit_of_measure - varchar(30) (null)</li>
+			  <li>sent_to_osc - bool (null, default false)</li>
+			  <li>created_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>updated_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>status - varchar(20) (null)</li>
+			  <li>updated_by - varchar(255) (null)</li>
+			  <li>transaction_type - varchar(20) (not null)</li>
+			  <li>remarks - varchar(240) (null)</li>
+			  <li>updated_by_hash - varchar(255) (null)</li>
+			</ol>
+			
+			Foreign Keys:
+			<ul>
+			  <li>inventory_update_vessel_id_foreign: A foreign key constraint on `vessel_id` referencing `vessel.vessel(id)`. On delete, the corresponding records are cascaded.</li>
+			</ul>
+		</li>
+	</ul>
+  </li>
+  
+  <li>
+	<ul>
+		<li>Database name: VESSEL</li>
+		<li>Table name: osc_inventory_balance</li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - serial4 (primary key, not null)</li>
+			  <li>vessel_id - int4 (not null)</li>
+			  <li>exchange_id - varchar(255) (null)</li>
+			  <li>exchange_date - timestamptz (null)</li>
+			  <li>item_code - varchar(40) (not null)</li>
+			  <li>category - varchar(255) (null)</li>
+			  <li>on_hand_quantity - int4 (not null)</li>
+			  <li>unit_of_measure - varchar(30) (null)</li>
+			  <li>osc_updated_at - timestamptz (not null)</li>
+			  <li>created_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>updated_at - timestamptz (not null, default current_timestamp)</li>
+			</ol>
+			
+			Foreign Keys:
+			<ul>
+			  <li>osc_inventory_balance_vessel_id_foreign: A foreign key constraint on `vessel_id` referencing `vessel.vessel(id)`. On delete, the corresponding records are cascaded.</li>
+			</ul>
+		</li>
+	</ul>
+  </li>
+  
+  
+  <li>
+	<ul>
+		<li>Database name: VESSEL</li>
+		<li>Table name: lub_oil_inventory_update</li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - serial4 (primary key, not null)</li>
+			  <li>inventory_update_id - int4 (null)</li>
+			  <li>type - varchar(40) (null)</li>
+			  <li>grade - varchar(255) (null)</li>
+			  <li>description - varchar(240) (not null)</li>
+			  <li>paris1_ref_id - int4 (null)</li>
+			  <li>created_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>updated_at - timestamptz (not null, default current_timestamp)</li>
+			</ol>
+			
+			Foreign Keys:
+			<ul>
+			  <li>lub_oil_inventory_update_inventory_update_id_foreign: A foreign key constraint on `inventory_update_id` referencing `vessel.inventory_update(id)`. On delete, the corresponding records are cascaded.</li>
+			</ul>
+		</li>
+	</ul>
+  </li>
+  
+  
+  
+  <li>
+	<ul>
+		<li>Database name: ITEM_MASTER</li>
+		<li>Table name: lub_oil_type</li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - serial4 (primary key, not null)</li>
+			  <li>type - varchar(255) (null)</li>
+			  <li>grade - varchar(255) (null)</li>
+			  <li>item_code - varchar(40) (not null)</li>
+			  <li>description - varchar(500) (not null)</li>
+			  <li>unit_of_measure - varchar(30) (null)</li>
+			  <li>created_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>updated_at - timestamptz (not null, default current_timestamp)</li>
+			</ol>
+		</li>
+	</ul>
+  </li>
+  
+  
+  
+  <li>
+	<ul>
+		<li>Database name: ITEM_MASTER</li>
+		<li>Table name: lub_oil_type</li>
+		<li>
+			Columns: 
+			<ol>
+			  <li>id - serial4 (primary key, not null)</li>
+			  <li>sparepart_id - int4 (not null)</li>
+			  <li>item_code - varchar(40) (not null)</li>
+			  <li>is_critical - bool (not null, default false)</li>
+			  <li>is_inventory_costed - bool (not null, default false)</li>
+			  <li>booking_code_id - int4 (not null)</li>
+			  <li>minimum_rob - int4 (null, default 0)</li>
+			  <li>recommended_rob - int4 (null, default 0)</li>
+			  <li>requisition_type - text (null)</li>
+			  <li>subgroup - varchar(40) (null)</li>
+			  <li>unit_of_measure - text (null)</li>
+			  <li>inventory_type - text (null)</li>
+			  <li>hash - varchar(256) (not null)</li>
+			  <li>created_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>updated_at - timestamptz (not null, default current_timestamp)</li>
+			  <li>deleted_at - timestamptz (null)</li>
+			</ol>
+			
+			Constraints
+			<ul>
+			  <li>vessel_spareparts_hash_unique: Ensures uniqueness of the `hash` field.</li>
+			  <li>vessel_spareparts_inventory_type_check: Ensures `inventory_type` is either 'Inventory' or 'Expense'.</li>
+			  <li>vessel_spareparts_item_code_hash_unique: Ensures uniqueness of `item_code` and `hash` together.</li>
+			  <li>vessel_spareparts_item_code_unique: Ensures uniqueness of `item_code`.</li>
+			  <li>vessel_spareparts_requisition_type_check: Ensures `requisition_type` is one of 'Ship - Goods' or 'Ship - Services'.</li>
+			  <li>vessel_spareparts_unit_of_measure_check: Ensures `unit_of_measure` is either 'Pcs' or 'Set'.</li>
+			</ul>
+		</li>
+	</ul>
+  </li>
+</ol>

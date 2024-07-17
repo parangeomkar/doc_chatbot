@@ -1,0 +1,759 @@
+# Inventory Management - Requisition Screen Changes Technical Design
+
+## Why requisition screen on mini-server is getting revamped?
+The booking codes for spares will be revamped for which the UI on mini-server will also be updated to accommodate these changes.
+
+## What are the features of new mini-server requisition screen?
+1. To allow user to add/edit/delete draft requisitions.
+2. To allow user to add/edit/delete vessel components as booking code categories and subcategories for spares requisition.
+3. To allow user to add/edit/delete spare parts for each subcategory separately.
+4. To auto-populate maker, model, serial number for selected category/subcategory.
+
+## High level design for creating spares requisition on mini-server using new module
+1. Select reason for requisition and department.
+2. Select booking code "Machinery Spares" under "Spares" product group.
+3. Select "Category" from dropdown which has a list of top level SFI code components.
+4. After selecting "Category", a "Subcategory" dropdown will appear where the sub-components of selected category would be listd.
+5. Click on "Add Subcategory" button and select required subcategories. Subcategories with multiple make and model are allowed for raising requisitions.
+6. After selection subcategories, set the make, model and serial number for each sub-category. These fields would be auto-populated if they exist in the database. While make and model are mandatory fields, the serial number is not.
+7. After saving requisition, the requisition details page would be loaded which will have draft requisition group. Multiple draft requisition groups would be created if selected subcategories have different make and model. The subcategories with same make and model would be grouped under single draft requisition group.
+8. Spare parts must be added for each selected subcategory. If the subcategory has parts in database then a list would be displayed where required spares can be selected by clicking checkbox at end of each row or by adding non-zero request quantity. Request quantity and unit are mandatory fields. Specification is optiona. 
+9. If the spares are not present in the database for selected subcategory then parts can be added manually by clicking "Add Part" button at the top right corner of screen.
+10. For removing the part, a checkbox can be deselected from spare parts list screen or by clicking delete button displayed against spare part in requisition details screen.
+11. To remove subcategories, click on "Edit" button at the top right corner of requisition details screen and the go to "Add Subcategory" option. Deselect checkbox against the subcategory that needs to be deleted and save the requisition.
+12. If the subcategory is deselected, then the parts added against it would also be deleted from draft requisition.
+13. On requisitions list screen, draft requisitions will be listed with "DRAFT" in "Status" column. Only draft requisitions could be edited or deleted.
+14. To close or finalize requisition and send for order, click on "Close Requisition" button on requisition details page.
+15. In case, multiple subcategories with different make and model had been selected. Multiple requisitions would be created for each make and model group. Same make and model subcategories woudl be grouped under same requisition.
+
+#-#-#
+
+## Low Level Design:
+-Below are the low-level changes needed to accommodate the updates related to the SFI codes, categorized by Paris 2.0, Paris 1.0, mini-server, and OSC -
+
+-PARIS 2.0 has postgres database, PARIS 1.0 has oracle database and mini-server has either mariadb or mysql database.
+
+### Paris 2.0 database changes:
+
+	-A new column "inv_flag" will be added to "vessel" table to identify inventory management enabled vessels.
+	-This flag is required to distinguish booking codes received from OSC. For example, "Main Engine" is a booking code as well as Subcategory.
+	-For inventory enabled vessels (inv_flag = true), when requisitions are synced from PARIS 2 to PARIS 1, all the new requisitions for Spares product group will be synced with booking code of "Machinery Spares" in fmlrequisition table of PARIS 1. 
+
+
+
+  -
+	
+		-Database name: VESSEL
+		-Table name: VESSEL 
+		-Type: Exiting table
+		-
+			New columns: 
+			
+				-inv_flag - boolean
+			
+		
+	
+ #-#-# 
+
+
+### Paris 1.0 database changes:
+
+  -
+	
+		-Database name: PARIS
+		-Table name: FMLREQUISITIONPARTS 
+		-Type: Exiting table
+		-
+			New columns: 
+			
+				-SUBCATEGORY_ID - integer
+				-DRAWING_NAME - varchar(150)
+				-DRAWING_NUMBER - varchar(150)
+				-ITEM_NUMBER - varchar(30)
+				-PART_NAME - varchar(240)
+			
+		
+	
+#-#-#  
+  
+  -
+	
+		-Database name: PARIS
+		-Table name: FML_INVENTORY_BOOKING_CODES 
+		-Type: New table
+		-
+			New columns: 
+			
+				-New table
+				-BOOKING_CODE_ID - integer
+				-IS_INVENTORY_BOOKING_CODE - bool
+				-CREATED_AT - date
+				-UPDATED_AT - date
+			
+		
+	
+  
+
+
+
+	- New master booking code "Machinery Spares" will be added in fmlattributecodes table for "Spares" category.
+	
+#-#-#
+### Mini-server database changes:
+
+	-Restructure the new mini-server tables for requisition to allow user to order parts based on component categories. This allows user to add/edit/remove vessel components as categories and subcategories.
+	-The records in draft tables would be temporary and be hard deleted once the requisition is submitted.
+	-On submission of requision draft, new records will be created in fmlrequisition and fmlrequisitionpart table.
+	-Multiple requisitions would be created in case selected subcategories have different maker or model.
+
+
+#-#-#
+  -
+	
+		-Database name: FML
+		-Table name: FMLREQUISITIONPARTS 
+		-Type: Exiting table
+		-
+			New columns: 
+			
+				-SUBCATEGORY_ID - integer
+				-DRAWING_NAME - varchar(150)
+				-DRAWING_NUMBER - varchar(150)
+				-ITEM_NUMBER - varchar(30)
+				-PART_NAME - varchar(240)
+			
+		
+	
+  #-#-#
+  
+  -
+	
+		-Database name: FML
+		-Table name: FML_INVENTORY_BOOKING_CODES 
+		-Type: New table
+		-
+			New columns: 
+			
+				-ID - identity
+				-BOOKING_CODE_ID - integer
+				-IS_INVENTORY_BOOKING_CODE - bool
+				-CREATED_AT - date
+				-UPDATED_AT - date
+			
+		
+	
+  
+  #-#-#
+  
+  -
+	
+		-Database name: FML
+		-Table name: FML_DRAFT_REQUISITION_SUBCATEGORIES
+		-Type: New table
+		-
+			New columns: 
+			
+				-ID identity
+				-DRAFT_REQUISITION_ID - integer
+				-SUBCATEGORY_ID - integer
+				-MAKER - varchar(40)
+				-MODEL - varchar(40)
+				-SERIAL_NUMBER - varchar(150)
+				-CREATED_AT - date
+				-UPDATED_AT - date
+			
+		
+	
+  #-#-#
+  
+  -
+	
+		-Database name: FML
+		-Table name: FML_DRAFT_REQUISITION
+		-Type: New table
+		-
+			Same schema as FMLREQUISITION table
+		
+	
+  #-#-#
+  
+  -
+	
+		-Database name: FML
+		-Table name: FML_DRAFT_REQUISITION_PARTS
+		-Type: New table
+		-
+			Same schema as FMLREQUISITIONPART table. However, "REQUISITIONID" column is named as "DRAFT_REQUISITION_ID"
+		
+	
+  #-#-#
+
+
+## Source Code Changes
+### PARIS 2.0
+
+	-Update requisitions PARIS 1.0 to PARIS 2.0 sync new "fmlrequisitionpart" columns from PARIS 1 which hold "master_sfi_codes" table id as subcategory id for inventory enabled vessels.
+	-Update requisition query API to send category and subcategory data to OSC.
+#-#-#
+
+### PARIS 1
+
+	-New sync rule will be created for "fmlrequisitionparts" and "fml_inventory_booking_codes" table specifically for inventory enabled vessels.
+
+ #-#-#
+
+### Mini-Server
+
+	-Update requisitions JSP to use new design for spares inventory.
+	-Update requisitions controller to insert new fields along with new booking code.
+#-#-#
+
+### OSC
+
+	-OSC will be updating its UI for category and subcategory change.
+
+#-#-#
+
+## Requisition Changes Propagation Flow: 
+### For Inventory Enabled Vessels
+
+
+
+
+# Mini-Server to OSC: Inventory & Requisitions Synchronization - Design & Debugging
+- This document explains the design of inventory and requisitions synchronization flow and basic debugging tips for troubleshooting issues with synchronization.
+- The scope of the document is limited to spares and lube oil consumption, adjustment and requisitions.
+
+## Spares and Lube Oil Inventory
+- In this section we describe the data models, synchronization sequences, the lambdas and APIs used along with the known issues and how to debug them for spares and lube oil inventory.
+- *Note: Same tables as spares inventory are used for other inventory types for sending consumption and receiving on hand quantity. Only lube oil uses different table for consumption under position report.
+#-#-#
+## Inventory Data Model
+
+### Mini-server data model
+
+
+  -
+	
+		-Database name: FML
+		-Table name: fmlosc_inv_balance_update 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, auto-incremented)
+			  -inv_id - integer (not null)
+			  -update_osc_quantity - integer (not null)
+			  -update_date - date (not null)
+			  -remarks - varchar(100)
+			  -type - varchar(1)
+			  -inventory_opt_type - integer (not null)
+			  -operatorid - integer (not null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+	#-#-#
+		-Database name: FML
+		-Table name: fmlosc_inventory_balance 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, not null)
+			  -shipid - integer (not null)
+			  -item_code - varchar(40) (not null)
+			  -is_spare - integer (not null)
+			  -on_hand_quantity - integer (not null)
+			  -operatorid - integer (not null)
+			  -unit_of_measure - integer (default null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+			
+	#-#-#
+		-Database name: FML
+		-Table name: fmloilconsumption 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, auto-incremented)
+			  -shipid - integer (not null)
+			  -oiltype - varchar(100) (not null)
+			  -oilgrade - varchar(300) (not null)
+			  -oilconsumtion - varchar(100) (not null)
+			  -reportId - varchar(100) (not null)
+			  -type - varchar(2) (not null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+			  -is_exported - integer (not null, default '0')
+			
+	#-#-#
+		-Database name: FML
+		-Table name: fmloilconsumptiondetails 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, auto-incremented)
+			  -oiltype - varchar(100) (not null)
+			  -oilgrade - varchar(100) (not null)
+			  -grade_description - varchar(100) (not null)
+			  -item_code - varchar(100) (not null, unique)
+			  -is_active - integer (not null, default '1')
+			  -operatorid - integer (not null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+			
+	#-#-#
+		-Database name: FML
+		-Table name: fml_vessel_spareparts 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, auto-incremented)
+			  -ref_inv_id - integer (default null)
+			  -item_code - varchar(40) (default null)
+			  -drawingname - varchar(150) (default null)
+			  -drawingno - varchar(150) (default null)
+			  -itemno - varchar(30) (default null)
+			  -partno - varchar(150) (default null)
+			  -description - varchar(240) (default null)
+			  -part_type_id - char(12) (default null)
+			  -is_critical - char(1) (default null)
+			  -minimum_rob - integer (default null)
+			  -recommended_rob - integer (default null)
+			  -manufacturer_name - varchar(100) (default null)
+			  -manufacturer_code - char(6) (default null)
+			  -bookingcode - integer (default null)
+			  -created_at - timestamp (default current_timestamp)
+			  -updated_at - timestamp (default current_timestamp)
+			  -deleted_at - timestamp (default null)
+			  -shipid - integer (default null)
+			  -uom - char(3) (default null)
+			
+			
+	
+  
+#-#-#
+
+
+### PARIS 1.0 data model
+
+  -
+	
+		-Database name: PARIS
+		-Table name: fmlosc_inv_balance_update 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, auto-incremented)
+			  -inv_id - integer (not null)
+			  -update_osc_quantity - integer (not null)
+			  -update_date - date (not null)
+			  -remarks - varchar(100)
+			  -type - varchar(1)
+			  -inventory_opt_type - integer (not null)
+			  -operatorid - integer (not null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+			#-#-#
+	
+		-Database name: FML
+		-Table name: fmlosc_inventory_balance 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, not null)
+			  -shipid - integer (not null)
+			  -item_code - varchar(40) (not null)
+			  -is_spare - integer (not null)
+			  -on_hand_quantity - integer (not null)
+			  -operatorid - integer (not null)
+			  -unit_of_measure - integer (default null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+		#-#-#
+	
+		-Database name: FML
+		-Table name: fmloilconsumption 
+		-
+			Columns: 
+			
+			  -id - integer (primary key, auto-incremented)
+			  -shipid - integer (not null)
+			  -oiltype - varchar(100) (not null)
+			  -oilgrade - varchar(300) (not null)
+			  -oilconsumtion - varchar(100) (not null)
+			  -reportId - varchar(100) (not null)
+			  -type - varchar(2) (not null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+			  -is_exported - integer (not null, default '0')
+		
+	#-#-#
+		-Database name: FML
+		-Table name: fmloilconsumptiondetails 
+		-
+			Columns: 
+			  -id - integer (primary key, auto-incremented)
+			  -oiltype - varchar(100) (not null)
+			  -oilgrade - varchar(100) (not null)
+			  -grade_description - varchar(100) (not null)
+			  -item_code - varchar(100) (not null, unique)
+			  -is_active - integer (not null, default '1')
+			  -operatorid - integer (not null)
+			  -lastmodified - timestamp (not null, default current_timestamp)
+			
+  #-#-#
+
+
+
+### PARIS 2.0 data model
+
+  -
+	
+		-Database name: VESSEL
+		-Table name: inventory_update
+		-
+			Columns: 
+			  -id - serial4 (primary key, not null)
+			  -vessel_id - int4 (null)
+			  -item_code - varchar(40) (not null)
+			  -product_group - varchar(150) (null)
+			  -subgroup - varchar(150) (null)
+			  -quantity_change - int4 (not null)
+			  -quantity_change_date - date (null)
+			  -unit_of_measure - varchar(30) (null)
+			  -sent_to_osc - bool (null, default false)
+			  -created_at - timestamptz (not null, default current_timestamp)
+			  -updated_at - timestamptz (not null, default current_timestamp)
+			  -status - varchar(20) (null)
+			  -updated_by - varchar(255) (null)
+			  -transaction_type - varchar(20) (not null)
+			  -remarks - varchar(240) (null)
+			  -updated_by_hash - varchar(255) (null)
+			
+	#-#-#
+		-Database name: VESSEL
+		-Table name: osc_inventory_balance
+		-
+			Columns: 
+			
+			  -id - serial4 (primary key, not null)
+			  -vessel_id - int4 (not null)
+			  -exchange_id - varchar(255) (null)
+			  -exchange_date - timestamptz (null)
+			  -item_code - varchar(40) (not null)
+			  -category - varchar(255) (null)
+			  -on_hand_quantity - int4 (not null)
+			  -unit_of_measure - varchar(30) (null)
+			  -osc_updated_at - timestamptz (not null)
+			  -created_at - timestamptz (not null, default current_timestamp)
+			  -updated_at - timestamptz (not null, default current_timestamp)
+			
+			#-#-#
+	
+		-Database name: VESSEL
+		-Table name: lub_oil_inventory_update
+		-
+			Columns: 
+			
+			  -id - serial4 (primary key, not null)
+			  -inventory_update_id - int4 (null)
+			  -type - varchar(40) (null)
+			  -grade - varchar(255) (null)
+			  -description - varchar(240) (not null)
+			  -paris1_ref_id - int4 (null)
+			  -created_at - timestamptz (not null, default current_timestamp)
+			  -updated_at - timestamptz (not null, default current_timestamp)
+			#-#-#
+	
+		-Database name: ITEM_MASTER
+		-Table name: lub_oil_type
+		-
+			Columns: 
+			
+			  -id - serial4 (primary key, not null)
+			  -type - varchar(255) (null)
+			  -grade - varchar(255) (null)
+			  -item_code - varchar(40) (not null)
+			  -description - varchar(500) (not null)
+			  -unit_of_measure - varchar(30) (null)
+			  -created_at - timestamptz (not null, default current_timestamp)
+			  -updated_at - timestamptz (not null, default current_timestamp)
+			#-#-#
+			
+	
+		-Database name: ITEM_MASTER
+		-Table name: lub_oil_type
+		-
+			Columns: 
+			
+			  -id - serial4 (primary key, not null)
+			  -sparepart_id - int4 (not null)
+			  -item_code - varchar(40) (not null)
+			  -is_critical - bool (not null, default false)
+			  -is_inventory_costed - bool (not null, default false)
+			  -booking_code_id - int4 (not null)
+			  -minimum_rob - int4 (null, default 0)
+			  -recommended_rob - int4 (null, default 0)
+			  -requisition_type - text (null)
+			  -subgroup - varchar(40) (null)
+			  -unit_of_measure - text (null)
+			  -inventory_type - text (null)
+			  -hash - varchar(256) (not null)
+			  -created_at - timestamptz (not null, default current_timestamp)
+			  -updated_at - timestamptz (not null, default current_timestamp)
+			  -deleted_at - timestamptz (null)
+			
+			
+  #-#-#
+
+
+# Mini-Server to OSC: Inventory & Requisitions Synchronization - Design & Debugging
+
+This document explains the design of inventory and requisitions synchronization flow and basic debugging tips for troubleshooting issues with synchronization.
+
+The scope of the document is limited to spares and lube oil consumption, adjustment and requisitions.
+
+Note: Same tables as spares inventory are used for other inventory types for sending consumption and receiving on hand quantity. Only lube oil uses different table for consumption under position report.
+
+#-#-#
+
+
+## Spares Sync Rules, CRON Jobs and APIs 
+In this section we describe sync rules used for PARIS 1 and mini-server synchronization along with CRONs and APIs for synchronization between PARIS 2 and PARIS 1.
+
+### PARIS 1 - Mini-Server Sync Rules
+
+PARIS 1 sync rules can be accessed here: https://paris.fleetship.com/fml/controller/loadExportModule
+
+
+Sync Rule:Lube oil consumption	
+Module: Ship Inventory	
+Group ID: 323
+Group query ID: 325
+Table for synchronization: fmloilconsumption 	
+Sync direction: Ship to Office
+
+
+Sync Rule: Inventory consumption/adjustment	
+Module: Ship Inventory	
+Group ID: 325
+Group query ID: 327
+Table for synchronization: fmlosc_inv_balance_update 	
+Table for synchronization: Ship to Office
+
+
+Sync Rule: Inventory balance	
+Module: Ship Inventory	
+Group ID: 324
+Group query ID: 326
+Table for synchronization: fmlosc_inventory_balance
+Table for synchronization: Office to Ship
+
+#-#-#
+
+
+### PARIS 2 Sync Jobs and APIs
+
+Inventory API repository: https://bitbucket.org/fleetshipteam/paris2-api-inventory
+
+#-#-#
+Description: Sync inventory consumption and adjustment from PARIS 1 to PARIS 2.
+Lambda: syncOscInventoryBalanceUpdateFromParis1	
+Frequency: Every 24hrs
+Retry logic: Sync everything after last sync time
+Trigger: CRON
+PARIS 1 Table: fmlosc_inv_balance_update	
+PARIS 2 Table: inventory_update
+
+#-#-#
+Description: Get inventory consumption from PARIS 2.
+Lambda: queryInventoryConsumptionUpdates	
+Endpoint: /inventory/query-inventory-consumption-updates
+GET parameters: vessel_id, product_group, subgroup, updated_since, offset, limit 
+Trigger: HTTP - GET
+PARIS 2 Table: inventory_update
+#-#-#
+
+Description: Get inventory adjustment from PARIS 2.
+Lambda: queryInventoryAdjustmentUpdates	
+Endpoint: /inventory/query-inventory-adjustment-updates
+GET parameters: vessel_id, updated_since, offset, limit 
+Trigger: HTTP - GET
+PARIS 2 Table: inventory_update
+
+#-#-#
+Description: Post updated ROB to PARIS 2.
+Lambda: postOscInventoryBalance	
+Endpoint: /inventory/osc-inventory-balance/{vessel_id}
+Retry logic: OSC implemented
+Trigger: HTTP - POST
+PARIS 2 Table: osc_inventory_balance
+
+#-#-#
+Description: Syncs updated ROB from PARIS 2 to PARIS 1.
+Lambda: syncOscInventoryBalanceToP1	
+Trigger: SNS
+SNS Topic: paris2-inventory-balance-sync-to-p1-qa2
+SNS Message Trigger: postOscInventoryBalance
+Retry logic: Sync everything after last sync time
+PARIS 1 Table: fmlosc_inventory_balance	
+PARIS 2 Table: osc_inventory_balance
+
+#-#-#
+
+Description: Sync lube oil consumption in position report from PARIS 1 to PARIS 2.
+Lambda: syncLubOilConsumptionFromParis1	
+Frequency: Every 24hrs
+Retry logic: Sync everything after last sync time
+Trigger: CRON
+PARIS 1 Tables: fmloilconsumption, lub_oil_inventory_update
+PARIS 2 Table: inventory_update
+
+#-#-#
+
+# Inventory Synchronization Failure Troubleshooting
+Issue: PARIS 1 does not have updated lube oil consumption from position report.
+Sync Rule - Lube oil consumption
+Steps for debugging:
+1. Check if fmloilconsumption table on mini-server has is_exported flag equal to 1.
+2. Check the XML file generated to have details of given records.
+3. Check if lastmodified date is prior to the latest record in fmlemailtooffice.
+4. If all checks pass, then the issue is on PARIS 1 office side import. 
+5. If the checks do not pass, then the issue is with the mini-server exported XML.
+
+#-#-#
+Issue: PARIS 1 does not have updated inventory consumption or adjustments data
+Sync Rule - Inventory consumption/adjustment
+Steps for debugging:	
+1. Get inv_id for a given inventory item from fmlosc_inv_balance_update table.
+2. Check if any record exists in fmlosc_inventory_balance table for this inv_id as id.
+3. Check the XML file generated to have details of given records.
+4. Check if lastmodified date is prior to the latest record in fmlemailtooffice.
+5. If all the above checks pass, then the issue is on PARIS 1 office side import. 
+6. If the checks do not pass, then the issue is with the mini-server exported XML.
+
+#-#-#
+Issue: Ship not receiving updated ROB.
+Sync Rule - Inventory balance	
+Steps for debugging:
+1. Check fmlosc_inventory_balance table in PARIS 1 to have proper item_code.
+2. Check the exported XML to have details of given records.
+3. Check if lastmodified date is prior to the latest record in fmlemailtoship.
+4. If all the above checks pass, then the issue is on mini-server side import.
+5. If the checks do not pass, then the issue is with the PARIS 1 exported XML.
+
+
+#-#-#
+Issue: PARIS 2 inventory consumption/adjustment data would become outdated.	
+Lambda: syncOscInventoryBalanceUpdateFromParis1	
+Steps for debugging:
+1. Get inv_id from PARIS 1 table fmlosc_inv_balance_update for a consumption/adjustment record in question.
+2. Check if there is a record in PARIS 1 table fmlosc_inventory_balance for this inv_id as id.
+3. If ROB record does exist, trigger lambda manually from AWS and check cloudwatch logs of for any error messages.
+4. Carry out local code debugging. First check if sync is failing due to wrong lastmodified timestamp used to query PARIS 1 table.
+
+#-#-#
+Issue: OSC not receiving inventory consumption from PARIS 2.
+Lambda: queryInventoryConsumptionUpdates	
+Steps for debugging:
+1. Use Swagger to query inventory consumption.
+2. Check inventory_update table in PARIS 2 Vessel DB to have expected records.
+3. Check cloudwatch logs for any error messages.
+4. Carry out local code debugging if further analysis is required.
+
+
+#-#-#
+Issue: OSC not receiving inventory adjustments from PARIS 2.	
+Lambda: queryInventoryAdjustmentUpdates	
+Steps for debugging:
+1. Use Swagger to query inventory consumption.
+2. Check inventory_update table in PARIS 2 Vessel DB to have expected records.
+3. Check cloudwatch logs for any error messages.
+4. Carry out local code debugging if further analysis is required.
+
+#-#-#
+Issue: OSC will fail to post updated inventory ROB to PARIS 2.
+Lambda: postOscInventoryBalance
+Steps for debugging:
+1. Use Swagger to post inventory balance.
+2. Check osc_inventory_balance table in PARIS 2 Vessel DB to have posted records.
+3. Check cloudwatch logs for any error messages.
+4. Carry out local code debugging if further analysis is required.
+
+#-#-#
+Issue: Updated inventory ROB is not syncing with PARIS 1. Ship has outdated ROB.
+Lambda: syncOscInventoryBalanceToP1
+Steps for debugging:
+1. Check osc_inventory_balance table in PARIS 2 Vessel DB to have expected records.
+2. Concerned osc_inventory_balance records should have updated_at time greater than last_sync_time in sync_metadata table in PARIS 2 Vessel DB.
+3. Trigger lambda manually from AWS and check cloudwatch logs for any error messages.
+4. Carry out local code debugging if further analysis is required.
+
+#-#-#
+Issue: Lube oil consumption is not synced with PARIS 2.	
+Lambda: syncLubOilConsumptionFromParis1
+Steps for debugging:
+1. Check if fmlosc_inventory_balance table in PARIS 1 to have record against lube oil item code in question for a given shipid.
+2. Check inventory_update and lub_oil_inventory_update table in PARIS 2 Vessel DB to have updated_at time lower than last_sync_time in sync_metadata table in PARIS 2 Item Master DB. 
+3. Check fmloilconsumption table in PARIS 1 to have lastmodified time greater than last_sync_time in sync_metadata table in PARIS 2 Vessel DB.
+4. Trigger lambda manually from AWS and check cloudwatch logs for any error messages.
+5. Carry out local code debugging if further analysis is required.
+
+#-#-#
+
+# Sync rules for requisitions.
+Sync rule: Requisition	
+Module group: Requisition	
+Group ID: 5	
+Group query ID: 7	
+PARIS 1 table: fmlrequisition	
+Sync direction: First Office to Ship then Ship to Office
+
+Sync rule: Requisition part
+Module group: Requisition	
+Group ID: 5	
+Group query ID: 8	
+PARIS 1 table: fmlrequisitionpart	
+Sync direction:First Office to Ship then Ship to Office
+
+Sync rule: Requisition feedback
+Module group: Requisition	
+Group ID: 38	
+Group query ID: 46	
+PARIS 1 table: fmlrequisitionfeedback	
+Sync direction: Ship to Office
+#-#-#
+
+
+# PARIS 2 Sync Jobs and APIs
+Lamdba: syncRequisitionsFromParis1	
+Trigger: CRON	
+Frequency: Every 24hrs
+Retry logic: Sync everything after last sync time	
+PARIS 1 Table: fmlrequisition, fmlrequisitionpart	
+PARIS 2 Table: requisition, requisition_part
+
+#-#-#
+Lambda: queryRequisitions	
+Trigger: HTTP - GET	
+Endpoint: /inventory/query-inventory-consumption-updates
+GET parameters: vessel_id, product_group, subgroup, updated_since, offset, limit 	 	
+PARIS 1 Tables: fmlrequisition, fmlrequisitionpart
+
+#-#-#
+Lambda: createRequisition	
+Trigger: HTTP - POST
+Endpoint: /inventory/query-inventory-adjustment-updates
+GET parameters: vessel_id, updated_since, offset, limit
+PARIS 2 Tables: requisition, requisition_part
+
+#-#-#
+Lambda: patchRequisition
+Trigger: HTTP - POST
+Endpoint: /inventory/osc-inventory-balance/{vessel_id}
+PARIS 2 Tables: purchase_order, purchase_order_line
+
+#-#-#
+Lambda: syncRequisitionToParis1	
+Trigger: SNS
+SNS Topic: paris2-inventory-balance-sync-to-p1-qa2	
+PARIS 1 Tables: fmlrequisition, fmlrequisitionpart
+PARIS 2 Tables: requisition, requisition_part, purchase_order, purchase_order_line
+
+#-#-#
+Lambda: triggerSyncPurchaseReceiptsFromParis1
+Trigger: CRON
+Frequency: Every 24hrs
+PARIS 1 Tables: fmlrequisitionpart, fmlrequisitionfeedback
+PARIS 2 Tables: purchase_receipt, purchase_receipt_line
